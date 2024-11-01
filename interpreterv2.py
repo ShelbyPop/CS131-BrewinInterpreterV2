@@ -124,7 +124,7 @@ class Interpreter(InterpreterBase):
             ##### Start Function Call ######
             
             func_def = self.get_func_def(func_call)
-            self.run_func(self.get_func_def(func_call))
+            self.run_func(func_def)
             #self.output(self.func_defs.dict[func_call])
 
             scoped_vars = {} # Create a dict for in-scope variables.
