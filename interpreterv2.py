@@ -180,7 +180,7 @@ class Interpreter(InterpreterBase):
     
 
     def is_value_node(self, expression_node):
-        return True if (expression_node.elem_type in ["int", "string"]) else False
+        return True if (expression_node.elem_type in ["int", "string", "bool", "nil"]) else False
     def is_variable_node(self, expression_node):
         return True if (expression_node.elem_type == "var") else False
     def is_binary_operator(self, expression_node):
@@ -225,9 +225,16 @@ class Interpreter(InterpreterBase):
         elif expression_node.elem_type == "-":
             return (self.evaluate_expression(expression_node.dict['op1']) - self.evaluate_expression(expression_node.dict['op2']))
 
+
     def evaluate_unary_operator(self, expression_node):
-        # can be neg (-b) or  '!' for boolean
-        return 0
+        # can be 'neg' (-b) or  '!' for boolean
+        self.output(expression_node)
+        if expression_node.elem_type == "neg":
+            return -(self.evaluate_expression(expression_node.dict['op1']))
+        if expression_node.elem_type == "!":
+            #self.output(expression_node)
+            return not (self.evaluate_expression(expression_node.dict['op1']))
+        
 
 
     # No more functions remain... for now... :)
@@ -245,8 +252,8 @@ program = """
 
             func main() {
                 var val;
-                val = nil;
-                print(foo());
+                val = 5;
+                print(!val);
             }          
             """
 interpreter = Interpreter()
