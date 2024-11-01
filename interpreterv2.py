@@ -57,6 +57,8 @@ class Interpreter(InterpreterBase):
             self.do_func_call(statement_node)
         elif self.is_if_statement(statement_node):
             self.do_if_statement(statement_node)
+        elif self.is_for_loop(statement_node):
+            self.do_for_loop(statement_node)
         # elif for loop
     
     def is_definition(self, statement_node):
@@ -67,7 +69,8 @@ class Interpreter(InterpreterBase):
         return (True if statement_node.elem_type == "fcall" else False)
     def is_if_statement(self, statement_node):
         return (True if statement_node.elem_type == "if" else False)
-
+    def is_for_loop(self, statement_node):
+        return (True if statement_node.elem_type == "for" else False)
 
     def do_definition(self, statement_node):
         # just add to var_name_to_value dict
@@ -194,6 +197,39 @@ class Interpreter(InterpreterBase):
         # reset to old vars
         self.variable_name_to_value = pre_scope_vars
 
+    def do_for_loop(self, statement_node):
+        self.output(statement_node)
+        pre_scope_vars = self.variable_name_to_value.copy()
+        ### BEGIN FOR SCOPE ###
+
+        # Run initializer
+        init_node = statement_node.dict['init']
+        self.run_statement(init_node)
+
+        condition = statement_node.dict['condition']
+        statements = statement_node.dict['statements']
+        
+        # Run the loop again (exits on condition false)
+        while self.evaluate_expression(condition):
+            self.output(f"RUNNING LOOP.")
+            for statement in statements:
+                self.run_statement(statement)
+            
+            update = statement_node.dict['update']
+            self.output(self.variable_name_to_value)
+            self.run_statement(update)
+            self.output(self.variable_name_to_value)
+            
+            #self.do_for_loop(statement_node)
+        # Exits if condition if false, for loop ends
+        self.output(f"END OF SCOPE REACHED.")
+        ### END FOR SCOPE ###
+        # reset to old vars
+        self.variable_name_to_value = pre_scope_vars
+        
+
+
+        
 
     def get_target_variable_name(self, statement_node):
         return statement_node.dict['name']
@@ -265,7 +301,7 @@ class Interpreter(InterpreterBase):
 
     def evaluate_unary_operator(self, expression_node):
         # can be 'neg' (-b) or  '!' for boolean
-        self.output(expression_node)
+        #self.output(expression_node)
         if expression_node.elem_type == "neg":
             return -(self.evaluate_expression(expression_node.dict['op1']))
         if expression_node.elem_type == "!":
@@ -295,27 +331,13 @@ class Interpreter(InterpreterBase):
     # No more functions remain... for now... :)
 
 program = """
-            func foo() {
-                var y;
-                y = 5;
-                return 17 + y;
-            }
 
-            func bar() {
-                return;
-            }
 
             func main() {
-                var x;
-                x = 5;
-                var y;
-                y = 10;
-                if(x > 1) {
-                    var y;
-                    y = 2;
-                    print(y);
+            var i;
+                for (i = 3; i > 0; i = i - 1) {
+                print(i);
                 }
-                print(y);
             }          
             """
 interpreter = Interpreter()
