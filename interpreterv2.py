@@ -92,6 +92,8 @@ class Interpreter(InterpreterBase):
             if func.dict['name'] == func_call:
                 return func
 
+    # equivalent of 'handleFunctionNodes' - 
+    # function to handle function call nodes, print, and input
     def do_func_call(self, statement_node):
         func_call = statement_node.dict['name']
         #self.output(func_call)
@@ -124,10 +126,24 @@ class Interpreter(InterpreterBase):
             ##### Start Function Call ######
             
             func_def = self.get_func_def(func_call)
+
+            # Copilot suggested this idea to just copy the calling functions variables, and rewrite after end of func
+            # Citing copilot for just direct line below. AI code count: 1 line
+            calling_vardefs = self.variable_name_to_value.copy()
+            self.variable_name_to_value = {}
             self.run_func(func_def)
+            self.output(self.variable_name_to_value)
+
+            # NOTE: for if or for, remember to check the copied vars above
+
+            # Re-establish old values.
+            self.variable_name_to_value = calling_vardefs
+            self.output(self.variable_name_to_value)
             #self.output(self.func_defs.dict[func_call])
 
-            scoped_vars = {} # Create a dict for in-scope variables.
+            # we can create a dict within the main dict, upon function end we will wipe the function's variable values.
+            #self.variable_name_to_value[func_call]
+        
                 
             ##### End Function Call ######
     
@@ -187,11 +203,17 @@ class Interpreter(InterpreterBase):
 
 program = """
             func foo() {
-                print("hi");
+                var x;
+                x = 6;
+                print(x);
             }
             func main() {
-                print("hello");
+                
+                var x;
+                x = 5;
                 foo();
+                print(x);
+                
             }
             
             """
