@@ -175,9 +175,25 @@ class Interpreter(InterpreterBase):
                             
             ##### End Function Call ######
     
+    # Scope rules: Can access parent calling vars, but vars they create are deleted after scope.
+    # So, keep track of what vars were before, and after end of clause, wipe those variables.
     def do_if_statement(self, statement_node):
-        self.output(statement_node)
-        return
+        pre_scope_vars = self.variable_name_to_value.copy()
+
+        ### BEGIN IF SCOPE ###
+        condition = statement_node.dict['condition']
+        statements = statement_node.dict['statements']
+        else_statements = statement_node.dict['else_statements']
+        if self.evaluate_expression(condition):
+            for statement in statements:
+                self.run_statement(statement)
+        else:
+            for else_statement in else_statements:
+                self.run_statement(else_statement)
+        ### END IF SCOPE ###
+        # reset to old vars
+        self.variable_name_to_value = pre_scope_vars
+
 
     def get_target_variable_name(self, statement_node):
         return statement_node.dict['name']
@@ -290,10 +306,16 @@ program = """
             }
 
             func main() {
-                var val;
-                val = 5;
-                print((val < 6) && (val >= 5) );
-             
+                var x;
+                x = 5;
+                var y;
+                y = 10;
+                if(x > 1) {
+                    var y;
+                    y = 2;
+                    print(y);
+                }
+                print(y);
             }          
             """
 interpreter = Interpreter()
