@@ -197,9 +197,12 @@ class Interpreter(InterpreterBase):
         return True if (expression_node.elem_type in ["neg", "!"]) else False
     def is_comparison_operator(self, expression_node):
         return True if (expression_node.elem_type in ['==', '<', '<=', '>', '>=', '!=']) else False
+    def is_binary_boolean_operator(self, expression_node):
+        return True if (expression_node.elem_type in ['&&', '||']) else False
+
 
     def evaluate_expression(self, expression_node):
-        self.output(f"expressing: {expression_node}")
+        #self.output(f"expressing: {expression_node}")
         if self.is_value_node(expression_node):
             return self.get_value(expression_node)
         elif self.is_variable_node(expression_node):
@@ -210,6 +213,8 @@ class Interpreter(InterpreterBase):
             return self.evaluate_unary_operator(expression_node)
         elif self.is_comparison_operator(expression_node):
             return self.evaluate_comparison_operator(expression_node)
+        elif self.is_binary_boolean_operator(expression_node):
+            return self.evaluate_binary_boolean_operator(expression_node)
         elif self.is_func_call(expression_node):
             return self.do_func_call(expression_node)
 
@@ -265,7 +270,12 @@ class Interpreter(InterpreterBase):
                 return (self.evaluate_expression(expression_node.dict['op1']) > self.evaluate_expression(expression_node.dict['op2']))
             case '!=': 
                 return (self.evaluate_expression(expression_node.dict['op1']) != self.evaluate_expression(expression_node.dict['op2']))  
-
+    def evaluate_binary_boolean_operator(self, expression_node):
+        match expression_node.elem_type:
+            case '&&':
+                return (self.evaluate_expression(expression_node.dict['op1']) and self.evaluate_expression(expression_node.dict['op2']))
+            case '||':
+                return (self.evaluate_expression(expression_node.dict['op1']) or self.evaluate_expression(expression_node.dict['op2']))
     # No more functions remain... for now... :)
 
 program = """
@@ -282,7 +292,7 @@ program = """
             func main() {
                 var val;
                 val = 5;
-                print(val >= 6);
+                print((val < 6) && (val >= 5) );
              
             }          
             """
