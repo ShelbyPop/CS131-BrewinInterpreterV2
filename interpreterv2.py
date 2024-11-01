@@ -55,6 +55,9 @@ class Interpreter(InterpreterBase):
             self.do_assignment(statement_node)
         elif self.is_func_call(statement_node):
             self.do_func_call(statement_node)
+        elif self.is_if_statement(statement_node):
+            self.do_if_statement(statement_node)
+        # elif for loop
     
     def is_definition(self, statement_node):
         return (True if statement_node.elem_type == "vardef" else False)
@@ -62,6 +65,8 @@ class Interpreter(InterpreterBase):
         return (True if statement_node.elem_type == "=" else False)
     def is_func_call(self, statement_node):
         return (True if statement_node.elem_type == "fcall" else False)
+    def is_if_statement(self, statement_node):
+        return (True if statement_node.elem_type == "if" else False)
 
 
     def do_definition(self, statement_node):
@@ -170,6 +175,9 @@ class Interpreter(InterpreterBase):
                             
             ##### End Function Call ######
     
+    def do_if_statement(self, statement_node):
+        self.output(statement_node)
+        return
 
     def get_target_variable_name(self, statement_node):
         return statement_node.dict['name']
@@ -184,12 +192,14 @@ class Interpreter(InterpreterBase):
     def is_variable_node(self, expression_node):
         return True if (expression_node.elem_type == "var") else False
     def is_binary_operator(self, expression_node):
-        return True if (expression_node.elem_type in ["+", "-"]) else False
+        return True if (expression_node.elem_type in ["+", "-", "*", "/"]) else False
     def is_unary_operator(self, expression_node):
         return True if (expression_node.elem_type in ["neg", "!"]) else False
+    def is_boolean_operator(self, expression_node):
+        return True if (expression_node.elem_type in ['==', '<', '<=', '>', '>=', '!=']) else False
 
     def evaluate_expression(self, expression_node):
-        #self.output(f"expressing: {expression_node}")
+        self.output(f"expressing: {expression_node}")
         if self.is_value_node(expression_node):
             return self.get_value(expression_node)
         elif self.is_variable_node(expression_node):
@@ -198,6 +208,8 @@ class Interpreter(InterpreterBase):
             return self.evaluate_binary_operator(expression_node)
         elif self.is_unary_operator(expression_node):
             return self.evaluate_unary_operator(expression_node)
+        elif self.is_boolean_operator(expression_node):
+            return self.evaluate_boolean_operator(expression_node)
         elif self.is_func_call(expression_node):
             return self.do_func_call(expression_node)
 
@@ -214,7 +226,6 @@ class Interpreter(InterpreterBase):
         else:
             return val
 
-
     # + or -
     def evaluate_binary_operator(self, expression_node):
         # can *only* be + or -.. for now.
@@ -224,6 +235,11 @@ class Interpreter(InterpreterBase):
             return (self.evaluate_expression(expression_node.dict['op1']) + self.evaluate_expression(expression_node.dict['op2']))
         elif expression_node.elem_type == "-":
             return (self.evaluate_expression(expression_node.dict['op1']) - self.evaluate_expression(expression_node.dict['op2']))
+        elif expression_node.elem_type == "*":
+            return (self.evaluate_expression(expression_node.dict['op1']) * self.evaluate_expression(expression_node.dict['op2']))
+        elif expression_node.elem_type == "/":
+            # integer division
+            return (self.evaluate_expression(expression_node.dict['op1']) // self.evaluate_expression(expression_node.dict['op2']))
 
 
     def evaluate_unary_operator(self, expression_node):
@@ -235,7 +251,20 @@ class Interpreter(InterpreterBase):
             #self.output(expression_node)
             return not (self.evaluate_expression(expression_node.dict['op1']))
         
-
+    def evaluate_boolean_operator(self, expression_node):
+        match expression_node.elem_type:
+            case '<':
+                return (self.evaluate_expression(expression_node.dict['op1']) < self.evaluate_expression(expression_node.dict['op2']))
+            case '<=':
+                return (self.evaluate_expression(expression_node.dict['op1']) <= self.evaluate_expression(expression_node.dict['op2']))
+            case '==':
+                return (self.evaluate_expression(expression_node.dict['op1']) == self.evaluate_expression(expression_node.dict['op2']))
+            case '>=':
+                return (self.evaluate_expression(expression_node.dict['op1']) >= self.evaluate_expression(expression_node.dict['op2']))
+            case '>':
+                return (self.evaluate_expression(expression_node.dict['op1']) > self.evaluate_expression(expression_node.dict['op2']))
+            case '!=': 
+                return (self.evaluate_expression(expression_node.dict['op1']) != self.evaluate_expression(expression_node.dict['op2']))  
 
     # No more functions remain... for now... :)
 
@@ -253,7 +282,8 @@ program = """
             func main() {
                 var val;
                 val = 5;
-                print(!val);
+                print(val >= 6);
+             
             }          
             """
 interpreter = Interpreter()
