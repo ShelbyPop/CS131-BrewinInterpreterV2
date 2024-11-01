@@ -134,8 +134,6 @@ class Interpreter(InterpreterBase):
             scoped_vars = {}
 
             # Assign parameters to the local variable dict
-            #self.output(func_def)
-            #self.output(statement_node)
 
             args = statement_node.dict['args'] # passed in arguments
             params = func_def.dict['args'] # function parameters
@@ -149,18 +147,13 @@ class Interpreter(InterpreterBase):
                 # Assign to local variable list
                 # Check if var exists in calling function
 
-                #self.output(f"param is {params[i]}, arg is {args[i]}")
-                #args_out = self.evaluate_expression(args[i])
                 scoped_vars[params[i].dict['name']] = self.evaluate_expression(args[i])
     
-
-            #self.output(scoped_vars)
             # replace calling vars with new scoped vars (parameters)
             self.variable_name_to_value = scoped_vars
             self.output(f"New In-scope vars only: {self.variable_name_to_value}")
             self.run_func(func_def)
             
-
             # NOTE: for if or for, remember to check the copied vars above
 
             #### END SCOPE ####
