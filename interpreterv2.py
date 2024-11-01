@@ -88,13 +88,18 @@ class Interpreter(InterpreterBase):
                 return True
         return False
 
-    def get_func_def(self, func_call):
+    # Allows function overloading by first searching for func_defs for a matching name and arg length
+    def get_func_def(self, func_call, arg_len):
         for func in self.func_defs:
-            if func.dict['name'] == func_call:
+            if func.dict['name'] == func_call and len(func.dict['args']) == arg_len:
                 return func
+        # Already check if func exists before calling
+        # So, must not have correct args.
+        super().error(ErrorType.NAME_ERROR,
+                       f"Incorrect amount of arguments given: {arg_len} ",
+                       )
+    
 
-    # equivalent of 'handleFunctionNodes' - 
-    # function to handle function call nodes, print, and input
     def do_func_call(self, statement_node):
         func_call = statement_node.dict['name']
         #self.output(func_call)
@@ -121,10 +126,10 @@ class Interpreter(InterpreterBase):
                 super().error(ErrorType.NAME_ERROR,
                                 f"Function {func_call} was not found",
                                 )
-            # If reach here, function must be valid.
-            ##### Start Function Call ######
             
-            func_def = self.get_func_def(func_call)
+            # If reach here, function must be valid.
+            func_def = self.get_func_def(func_call, len(statement_node.dict['args']))
+            ##### Start Function Call ######
             
             # Copilot suggested this idea to just copy the calling functions variables, and rewrite after end of func
             # Citing copilot for just direct line below. AI code count: 1 line
@@ -138,11 +143,6 @@ class Interpreter(InterpreterBase):
             args = statement_node.dict['args'] # passed in arguments
             params = func_def.dict['args'] # function parameters
 
-            # Check if incorrect num of args passed
-            if len(args) != len(params):
-                super().error(ErrorType.NAME_ERROR, f"Incorrect amount of arguments given: {len(args)} ",)
-            # if reach here, args must be correct
-
             for i in range(0,len(params)):
                 # Assign to local variable list
                 # Check if var exists in calling function
@@ -151,7 +151,7 @@ class Interpreter(InterpreterBase):
     
             # replace calling vars with new scoped vars (parameters)
             self.variable_name_to_value = scoped_vars
-            self.output(f"New In-scope vars only: {self.variable_name_to_value}")
+            # self.output(f"New In-scope vars only: {self.variable_name_to_value}")
             self.run_func(func_def)
             
             # NOTE: for if or for, remember to check the copied vars above
@@ -160,8 +160,7 @@ class Interpreter(InterpreterBase):
 
             # Re-establish old values.
             self.variable_name_to_value = parent_vardefs
-            #self.output(f"Scope over, back to old vars: {self.variable_name_to_value}")        
-                
+                            
             ##### End Function Call ######
     
 
@@ -223,7 +222,12 @@ program = """
                 var foo;
                 foo = 5;
                 print(foo);
+                foo(6);
                 foo(foo, 2);
+            }
+
+            func foo(x) {
+                print(x);
             }
 
             func foo(y, x) {
