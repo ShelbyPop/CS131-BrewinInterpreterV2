@@ -116,8 +116,9 @@ class Interpreter(InterpreterBase):
             for arg in statement_node.dict['args']:
                 output += str(self.evaluate_expression(arg))
             # THIS IS 2/2 OF ONLY REAL SELF.OUTPUT
-            self.output(output)
-            return input()
+            if output != "":
+                self.output(output)
+            return self.get_input()
         else:
             ## USER-DEFINED FUNCTION ##
             # Check if function is defined
@@ -184,6 +185,8 @@ class Interpreter(InterpreterBase):
         return True if (expression_node.elem_type == "var") else False
     def is_binary_operator(self, expression_node):
         return True if (expression_node.elem_type in ["+", "-"]) else False
+    def is_unary_operator(self, expression_node):
+        return True if (expression_node.elem_type in ["neg", "!"]) else False
 
     def evaluate_expression(self, expression_node):
         #self.output(f"expressing: {expression_node}")
@@ -193,6 +196,8 @@ class Interpreter(InterpreterBase):
             return self.get_value_of_variable(expression_node)
         elif self.is_binary_operator(expression_node):
             return self.evaluate_binary_operator(expression_node)
+        elif self.is_unary_operator(expression_node):
+            return self.evaluate_unary_operator(expression_node)
         elif self.is_func_call(expression_node):
             return self.do_func_call(expression_node)
 
@@ -219,6 +224,10 @@ class Interpreter(InterpreterBase):
             return (self.evaluate_expression(expression_node.dict['op1']) + self.evaluate_expression(expression_node.dict['op2']))
         elif expression_node.elem_type == "-":
             return (self.evaluate_expression(expression_node.dict['op1']) - self.evaluate_expression(expression_node.dict['op2']))
+
+    def evaluate_unary_operator(self, expression_node):
+        # can be neg (-b) or  '!' for boolean
+        return 0
 
 
     # No more functions remain... for now... :)
