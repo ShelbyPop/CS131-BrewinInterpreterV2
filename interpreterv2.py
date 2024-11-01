@@ -49,6 +49,7 @@ class Interpreter(InterpreterBase):
 
     def run_statement(self, statement_node):
         if self.is_definition(statement_node):
+            #self.output(f"doing definition: {statement_node}")
             self.do_definition(statement_node)
         elif self.is_assignment(statement_node):
             self.do_assignment(statement_node)
@@ -120,30 +121,53 @@ class Interpreter(InterpreterBase):
                 super().error(ErrorType.NAME_ERROR,
                                 f"Function {func_call} was not found",
                                 )
-            # end if
-
             # If reach here, function must be valid.
             ##### Start Function Call ######
             
             func_def = self.get_func_def(func_call)
-
+            
             # Copilot suggested this idea to just copy the calling functions variables, and rewrite after end of func
             # Citing copilot for just direct line below. AI code count: 1 line
-            calling_vardefs = self.variable_name_to_value.copy()
-            self.variable_name_to_value = {}
+            parent_vardefs = self.variable_name_to_value.copy()
+
+            #### START SCOPE ####
+            scoped_vars = {}
+
+            # Assign parameters to the local variable dict
+            #self.output(func_def)
+            #self.output(statement_node)
+
+            args = statement_node.dict['args'] # passed in arguments
+            params = func_def.dict['args'] # function parameters
+
+            # Check if incorrect num of args passed
+            if len(args) != len(params):
+                super().error(ErrorType.NAME_ERROR, f"Incorrect amount of arguments given: {len(args)} ",)
+            # if reach here, args must be correct
+
+            for i in range(0,len(params)):
+                # Assign to local variable list
+                # Check if var exists in calling function
+
+                #self.output(f"param is {params[i]}, arg is {args[i]}")
+                #args_out = self.evaluate_expression(args[i])
+                scoped_vars[params[i].dict['name']] = self.evaluate_expression(args[i])
+    
+
+            #self.output(scoped_vars)
+            # replace calling vars with new scoped vars (parameters)
+            self.variable_name_to_value = scoped_vars
+            self.output(f"New In-scope vars only: {self.variable_name_to_value}")
             self.run_func(func_def)
-            self.output(self.variable_name_to_value)
+            
 
             # NOTE: for if or for, remember to check the copied vars above
 
-            # Re-establish old values.
-            self.variable_name_to_value = calling_vardefs
-            self.output(self.variable_name_to_value)
-            #self.output(self.func_defs.dict[func_call])
+            #### END SCOPE ####
 
-            # we can create a dict within the main dict, upon function end we will wipe the function's variable values.
-            #self.variable_name_to_value[func_call]
-        
+            # Re-establish old values.
+            self.variable_name_to_value = parent_vardefs
+            #self.output(f"Scope over, back to old vars: {self.variable_name_to_value}")        
                 
             ##### End Function Call ######
     
@@ -164,7 +188,7 @@ class Interpreter(InterpreterBase):
         return True if (expression_node.elem_type in ["+", "-"]) else False
 
     def evaluate_expression(self, expression_node):
-        # self.output(expression_node)
+        #self.output(f"expressing: {expression_node}")
         if self.is_value_node(expression_node):
             return self.get_value(expression_node)
         elif self.is_variable_node(expression_node):
@@ -202,20 +226,17 @@ class Interpreter(InterpreterBase):
     # No more functions remain... for now... :)
 
 program = """
-            func foo() {
-                var x;
-                x = 6;
-                print(x);
-            }
             func main() {
-                
-                var x;
-                x = 5;
-                foo();
-                print(x);
-                
+                var foo;
+                foo = 5;
+                print(foo);
+                foo(foo, 2);
             }
-            
+
+            func foo(y, x) {
+                print(y, " ", x);
+            }
+                        
             """
 interpreter = Interpreter()
 interpreter.run(program)
