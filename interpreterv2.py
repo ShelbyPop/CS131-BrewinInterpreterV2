@@ -121,7 +121,7 @@ class Interpreter(InterpreterBase):
             # end if
 
             # If reach here, function must be valid.
-            # Do function call
+            ##### Start Function Call ######
             
             func_def = self.get_func_def(func_call)
             self.run_func(self.get_func_def(func_call))
@@ -129,7 +129,7 @@ class Interpreter(InterpreterBase):
 
             scoped_vars = {} # Create a dict for in-scope variables.
                 
-
+            ##### End Function Call ######
     
 
     def get_target_variable_name(self, statement_node):
