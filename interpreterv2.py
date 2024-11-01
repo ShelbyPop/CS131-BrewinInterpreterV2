@@ -119,19 +119,17 @@ class Interpreter(InterpreterBase):
             self.output(output)
             return input()
         else:
-            # USER-DEFINED FUNCTION
+            ## USER-DEFINED FUNCTION ##
             # Check if function is defined
-
             if not self.check_valid_func(func_call):
                 super().error(ErrorType.NAME_ERROR,
                                 f"Function {func_call} was not found",
                                 )
-            
-            # If reach here, function must be valid.
+            # If reach here, function must be valid; grab function definition
             func_def = self.get_func_def(func_call, len(statement_node.dict['args']))
-            ##### Start Function Call ######
             
-            # Copilot suggested this idea to just copy the calling functions variables, and rewrite after end of func
+            ##### Start Function Call ######
+            # Copilot suggested this idea to just copy the calling functions variables
             # Citing copilot for just direct line below. AI code count: 1 line
             parent_vardefs = self.variable_name_to_value.copy()
 
@@ -157,6 +155,14 @@ class Interpreter(InterpreterBase):
             # NOTE: for if or for, remember to check the copied vars above
 
             #### END SCOPE ####
+            #self.output(f"function definition: {func_def}")
+            statement_nodes = func_def.dict['statements']
+            for statement in statement_nodes:
+                if statement.elem_type == "return":
+                    return_node = statement
+                    return self.evaluate_expression(return_node.dict['expression'])
+
+            
 
             # Re-establish old values.
             self.variable_name_to_value = parent_vardefs
@@ -218,22 +224,21 @@ class Interpreter(InterpreterBase):
     # No more functions remain... for now... :)
 
 program = """
+            func foo() {
+                var y;
+                y = 5;
+                return 17 + y;
+            }
+
+            func bar() {
+                return;
+            }
+
             func main() {
-                var foo;
-                foo = 5;
-                print(foo);
-                foo(6);
-                foo(foo, 2);
-            }
-
-            func foo(x) {
-                print(x);
-            }
-
-            func foo(y, x) {
-                print(y, " ", x);
-            }
-                        
+                var val;
+                val = nil;
+                print(foo());
+            }          
             """
 interpreter = Interpreter()
 interpreter.run(program)
