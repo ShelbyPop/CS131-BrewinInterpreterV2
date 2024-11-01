@@ -195,7 +195,7 @@ class Interpreter(InterpreterBase):
         return True if (expression_node.elem_type in ["+", "-", "*", "/"]) else False
     def is_unary_operator(self, expression_node):
         return True if (expression_node.elem_type in ["neg", "!"]) else False
-    def is_boolean_operator(self, expression_node):
+    def is_comparison_operator(self, expression_node):
         return True if (expression_node.elem_type in ['==', '<', '<=', '>', '>=', '!=']) else False
 
     def evaluate_expression(self, expression_node):
@@ -208,8 +208,8 @@ class Interpreter(InterpreterBase):
             return self.evaluate_binary_operator(expression_node)
         elif self.is_unary_operator(expression_node):
             return self.evaluate_unary_operator(expression_node)
-        elif self.is_boolean_operator(expression_node):
-            return self.evaluate_boolean_operator(expression_node)
+        elif self.is_comparison_operator(expression_node):
+            return self.evaluate_comparison_operator(expression_node)
         elif self.is_func_call(expression_node):
             return self.do_func_call(expression_node)
 
@@ -251,7 +251,7 @@ class Interpreter(InterpreterBase):
             #self.output(expression_node)
             return not (self.evaluate_expression(expression_node.dict['op1']))
         
-    def evaluate_boolean_operator(self, expression_node):
+    def evaluate_comparison_operator(self, expression_node):
         match expression_node.elem_type:
             case '<':
                 return (self.evaluate_expression(expression_node.dict['op1']) < self.evaluate_expression(expression_node.dict['op2']))
