@@ -7,23 +7,31 @@ from intbase import *
 class Interpreter(InterpreterBase):
     def __init__(self, console_output=True, inp=None, trace_output=False):
         super().__init__(console_output, inp)   # call InterpreterBase's constructor
+        # Since functions (at the top level) can be created anywhere, we'll just do a search for function definitions and assign them 'globally'
+        # alternate name: func_nodes
+        self.func_defs = []
+        
 
     def run(self, program):
 
         ast = parse_program(program) # returns list of function nodes
+        #self.output(ast)
         self.variable_name_to_value = {} # dict to hold vars
+        self.func_defs = self.get_func_defs(ast)
         main_func_node = self.get_main_func_node(ast)
         #self.output(main_func_node)
         self.run_func(main_func_node)
 
+    # grabs all globally defined functions to call when needed.
+    def get_func_defs(self, ast):
+        # returns functions sub-dict, 'functions' is key
+        return ast.dict['functions']
+
     # returns 'main' func node from the dict input.
     def get_main_func_node(self, ast):
 
-        # returns functions sub-dict, 'functions' is a value
-        func_list = ast.dict['functions'] 
-
         # checks for function whose name is 'main'
-        for func in func_list:
+        for func in self.func_defs:
             if func.dict['name'] == "main":
                 return func
         
@@ -35,7 +43,7 @@ class Interpreter(InterpreterBase):
     def run_func(self, func_node):
         # statements key for sub-dict.
         for statement_node in func_node.dict['statements']:
-            # self.output(statement_node)
+            #self.output(statement_node)
             self.run_statement(statement_node)
     
 
@@ -70,10 +78,23 @@ class Interpreter(InterpreterBase):
         resulting_value = self.evaluate_expression(source_node)
         self.variable_name_to_value[target_var_name] = resulting_value
         # below actually quite important during testing
-        self.output(self.variable_name_to_value[target_var_name])
+        #self.output(self.variable_name_to_value[target_var_name])
+
+    # Check if function is defined
+    def check_valid_func(self, func_call):
+        for func in self.func_defs:
+            if func.dict['name'] == func_call:
+                return True
+        return False
+
+    def get_func_def(self, func_call):
+        for func in self.func_defs:
+            if func.dict['name'] == func_call:
+                return func
 
     def do_func_call(self, statement_node):
         func_call = statement_node.dict['name']
+        #self.output(func_call)
         if func_call == "print":
             output = ""
             # loop through each arg in args list for print, evaluate their expressions, concat, and output.
@@ -89,8 +110,27 @@ class Interpreter(InterpreterBase):
             # THIS IS 2/2 OF ONLY REAL SELF.OUTPUT
             self.output(output)
             return input()
-    
+        else:
+            # USER-DEFINED FUNCTION
+            # Check if function is defined
 
+            if not self.check_valid_func(func_call):
+                super().error(ErrorType.NAME_ERROR,
+                                f"Function {func_call} was not found",
+                                )
+            # end if
+
+            # If reach here, function must be valid.
+            # Do function call
+            
+            func_def = self.get_func_def(func_call)
+            self.run_func(self.get_func_def(func_call))
+            #self.output(self.func_defs.dict[func_call])
+
+            scoped_vars = {} # Create a dict for in-scope variables.
+                
+
+    
 
     def get_target_variable_name(self, statement_node):
         return statement_node.dict['name']
@@ -146,10 +186,14 @@ class Interpreter(InterpreterBase):
     # No more functions remain... for now... :)
 
 program = """
+            func foo() {
+                print("hi");
+            }
             func main() {
-             var x;
-             x = inputi("Enter a value: ");
-            }"""
-# z should be '1'
+                print("hello");
+                foo();
+            }
+            
+            """
 interpreter = Interpreter()
 interpreter.run(program)
