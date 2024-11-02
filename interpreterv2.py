@@ -45,10 +45,19 @@ class Interpreter(InterpreterBase):
     def run_func(self, func_node):
         # statements key for sub-dict.
         self.variable_scope_stack.append({})
-        for statement_node in func_node.dict['statements']:
+        for statement in func_node.dict['statements']:
+            return_value = self.run_statement(statement)
+            # I dont think i can just do 'if return_value:' incase its an int
+            if return_value is not None:
+                # Copilot (+1)
+                break
+
+                #end scope early
+                self.variable_scope_stack.pop()
+                return return_value
             #self.output(statement_node)
-            self.run_statement(statement_node)
         self.variable_scope_stack.pop()
+        return return_value
     
 
     def run_statement(self, statement_node):
@@ -58,13 +67,13 @@ class Interpreter(InterpreterBase):
         elif self.is_assignment(statement_node):
             self.do_assignment(statement_node)
         elif self.is_func_call(statement_node):
-            self.do_func_call(statement_node)
+            return self.do_func_call(statement_node)
         elif self.is_return_statement(statement_node):
-            self.do_return_statement(statement_node)
+            return self.do_return_statement(statement_node)
         elif self.is_if_statement(statement_node):
-            self.do_if_statement(statement_node)
+            return self.do_if_statement(statement_node)
         elif self.is_for_loop(statement_node):
-            self.do_for_loop(statement_node)
+            return self.do_for_loop(statement_node)
 
 
     
@@ -99,15 +108,7 @@ class Interpreter(InterpreterBase):
             if target_var_name in scope: 
                 scope[target_var_name] = resulting_value 
                 return 
-        #self.output(self.variable_scope_stack)
         super().error(ErrorType.NAME_ERROR, f"variable used and not declared: {target_var_name}")
-        # if not self.var_name_exists(target_var_name):
-        #     # error called for not declared var, and states it
-        #     super().error(ErrorType.NAME_ERROR, ("variable used and not declared: " + target_var_name), )
-        
-        # self.variable_name_to_value[target_var_name] = resulting_value
-        # below actually quite important during testing
-        #self.output(self.variable_name_to_value[target_var_name])
 
     # Check if function is defined
     def check_valid_func(self, func_call):
@@ -178,32 +179,12 @@ class Interpreter(InterpreterBase):
 
             # Assign parameters to the local variable dict
 
-            # def do_definition(self, statement_node):
-            # # just add to var_name_to_value dict
-            # target_var_name = self.get_target_variable_name(statement_node)
-            # # Copilot (+1)
-            # self.variable_scope_stack[-1][target_var_name] = None           
-
-
-            
-            # def do_assignment(self, statement_node):
-            #     target_var_name = self.get_target_variable_name(statement_node)
-            #     source_node = self.get_expression_node(statement_node)
-            #     resulting_value = self.evaluate_expression(source_node)
-
-            #     # Copilot (+5)
-            #     for scope in reversed(self.variable_scope_stack): 
-            #         if target_var_name in scope: 
-            #             scope[target_var_name] = resulting_value 
-            #             return 
-
             args = statement_node.dict['args'] # passed in arguments
             params = func_def.dict['args'] # function parameters
 
             # intialize paramas, and then assign to them each arg in order
             for i in range(0,len(params)):
                 # Assign to local variable list
-                # Check if var exists in calling function
 
                 # define param
                 var_name = params[i].dict['name']
@@ -211,25 +192,13 @@ class Interpreter(InterpreterBase):
                 # self.do_assignment(self.evaluate_expression(args[i]))
                 #scoped_vars[params[i].dict['name']] = self.evaluate_expression(args[i])
     
-            # replace calling vars with new scoped vars (parameters)
-            #self.variable_name_to_value = scoped_vars
-            # self.output(f"New In-scope vars only: {self.variable_name_to_value}")
-            self.run_func(func_def)
-            
+            return_value = self.run_func(func_def)
+            #self.output(return_value)
             # NOTE: for if or for, remember to check the copied vars above
-
-            
-            #self.output(f"function definition: {func_def}")
-            statement_nodes = func_def.dict['statements']
-            for statement in statement_nodes:
-                if statement.elem_type == "return":
-                    return_node = statement
-                    
-                    return self.evaluate_expression(return_node.dict['expression'])
-
             
             #### END SCOPE ####
             self.variable_scope_stack.pop()
+            return return_value
             # Re-establish old values.
             #self.variable_name_to_value = parent_vardefs
                             
@@ -255,12 +224,25 @@ class Interpreter(InterpreterBase):
         else_statements = statement_node.dict['else_statements']
         if condition:
             for statement in statements:
-                self.output(statement)
-                self.run_statement(statement)
+                #self.output(statement)
+                return_value = self.run_statement(statement)
+                #self.output(return_value)
+                # I dont think i can just do 'if return_value:' incase its an int
+                if return_value is not None:
+                    #end scope early
+                    self.variable_scope_stack.pop()
+                    return return_value
+                    
+                    # if return needed, stop running statements, immediately return the value.
         else:
             if else_statements:
                 for else_statement in else_statements:
-                    self.run_statement(else_statement)
+                    return_value = self.run_statement(else_statement)
+                    # I dont think i can just do 'if return_value:' incase its an int
+                    if return_value is not None:
+                        #end scope early
+                        self.variable_scope_stack.pop()
+                        return return_value
 
         ### END IF SCOPE ###
 
@@ -297,7 +279,16 @@ class Interpreter(InterpreterBase):
         while self.evaluate_expression(condition):
             #self.output(f"RUNNING LOOP.")
             for statement in statements:
-                self.run_statement(statement)
+                #self.output(statement)
+                return_value = self.run_statement(statement)
+                #self.output(return_value)
+                # I dont think i can just do 'if return_value:' incase its an int
+                if return_value is not None:
+                    #end scope early
+                    self.variable_scope_stack.pop()
+                    return return_value
+                    
+                    # if return needed, stop running statements, immediately return the value.
             
             update = statement_node.dict['update']
             self.run_statement(update)
@@ -308,15 +299,6 @@ class Interpreter(InterpreterBase):
         ### END FOR SCOPE ###
         # Copilot (+1)
         self.variable_scope_stack.pop()
-        # hard reset to old vars
-        #self.variable_name_to_value = pre_scope_vars
-        ## spec is confusing, one area said to keep the change, other said to shadow, gonna discard for now ##
-        # reset to old vars **BUT KEEP CHANGED VARS**
-        # new_vars = self.variable_name_to_value.copy()
-        # # use dict comprehension?
-        # self.variable_name_to_value = {name: val for name,val in new_vars.items() if name in pre_scope_vars.keys()  }
-
-
         
     # helper functions
     def get_target_variable_name(self, statement_node):
@@ -377,7 +359,7 @@ class Interpreter(InterpreterBase):
                     return 0 
                 else: 
                     return val 
-        self.output(self.variable_scope_stack)
+        # self.output(self.variable_scope_stack)
         super().error(ErrorType.NAME_ERROR, f"variable '{var_name}' used and not declared")
         
         # val = self.variable_name_to_value[expression_node.dict['name']]
@@ -398,7 +380,7 @@ class Interpreter(InterpreterBase):
             super().error(ErrorType.TYPE_ERROR, "Arguments must be of type 'int'.")
         # if + and ...
         elif not  ((isinstance(eval1, int) and isinstance(eval2,int))) or ((isinstance(eval1, str) and isinstance(eval2,str))):
-            self.output(f"type 1: {type(eval1)}, type 2: {type(eval2)}")
+            # self.output(f"type 1: {type(eval1)}, type 2: {type(eval2)}")
             super().error(ErrorType.TYPE_ERROR, "Types for + must be both of type int or string.")
         if expression_node.elem_type == "+":
             return (eval1 + eval2)
@@ -458,17 +440,20 @@ class Interpreter(InterpreterBase):
     # No more functions remain... for now... :)
 
 program = """
-            func foo(n) {
+            func factorial(n) {
                 if (n == 0) {
                     return 1;
+                } else {
+                    return n * factorial(n - 1);
                 }
             }
 
             func main() {
                 var result;
-                result = foo(0);
-                print(result);
+                result = factorial(5);
+                print(result); 
             }
+
 
             """
 interpreter = Interpreter()
