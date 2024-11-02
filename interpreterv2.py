@@ -195,17 +195,32 @@ class Interpreter(InterpreterBase):
 
         ### BEGIN IF SCOPE ###
         condition = statement_node.dict['condition']
+        condition = self.evaluate_expression(condition)
+        # error if condition is non-boolean
+        if type(condition) is not bool:
+            super().error(ErrorType.TYPE_ERROR, "Condition is not of type bool",)
+
         statements = statement_node.dict['statements']
         else_statements = statement_node.dict['else_statements']
-        if self.evaluate_expression(condition):
+        if condition:
             for statement in statements:
                 self.run_statement(statement)
         else:
             for else_statement in else_statements:
                 self.run_statement(else_statement)
         ### END IF SCOPE ###
-        # reset to old vars
-        self.variable_name_to_value = pre_scope_vars
+        # hard reset to old vars
+        #self.variable_name_to_value = pre_scope_vars
+
+        for var in list(self.variable_name_to_value.keys()): 
+            if var not in pre_scope_vars: 
+                del self.variable_name_to_value[var]
+        ## spec is confusing, one area said to keep the change, other said to shadow, gonna discard for now ##
+        # reset to old vars **BUT KEEP CHANGED VARS**
+        # new_vars = self.variable_name_to_value.copy()
+        # # use dict comprehension?
+        # self.variable_name_to_value = {name: val for name,val in new_vars.items() if name in pre_scope_vars.keys()  }
+
 
     def do_for_loop(self, statement_node):
         pre_scope_vars = self.variable_name_to_value.copy()
@@ -216,6 +231,10 @@ class Interpreter(InterpreterBase):
         self.run_statement(init_node)
 
         condition = statement_node.dict['condition']
+        # error if condition is non-boolean
+        if type(condition) is not bool:
+            super().error(ErrorType.TYPE_ERROR, "Condition is not of type bool",)
+
         statements = statement_node.dict['statements']
         
         # Run the loop again (exits on condition false)
@@ -231,9 +250,13 @@ class Interpreter(InterpreterBase):
         #self.output(f"END OF SCOPE REACHED.")\
 
         ### END FOR SCOPE ###
-        # reset to old vars
+        # hard reset to old vars
         self.variable_name_to_value = pre_scope_vars
-        
+        ## spec is confusing, one area said to keep the change, other said to shadow, gonna discard for now ##
+        # reset to old vars **BUT KEEP CHANGED VARS**
+        # new_vars = self.variable_name_to_value.copy()
+        # # use dict comprehension?
+        # self.variable_name_to_value = {name: val for name,val in new_vars.items() if name in pre_scope_vars.keys()  }
 
 
         
@@ -294,60 +317,84 @@ class Interpreter(InterpreterBase):
 
     # + or -
     def evaluate_binary_operator(self, expression_node):
-        # can *only* be + or -.. for now.
+        # can *only* be +, -, *, / for now.
         # returns arg1 - arg2 (allows for nested/recursive calls should something like 5+8-6 happen)
         # self.output(expression_node)
+        eval1 = self.evaluate_expression(expression_node.dict['op1'])
+        eval2 = self.evaluate_expression(expression_node.dict['op2'])
+        # for all operators other than + (for concat), both must be of type 'int'
+        if (expression_node.elem_type != "+") and not (isinstance(eval1, int) and isinstance(eval2,int)):
+            super().error(ErrorType.TYPE_ERROR, "Arguments must be of type 'int'.")
+        # if + and ...
+        elif (not (isinstance(eval1, int) and isinstance(eval2,int))) or (not (isinstance(eval1, str) and isinstance(eval2,str))):
+            super().error(ErrorType.TYPE_ERROR, "Types for + must be both of type int or string.")
         if expression_node.elem_type == "+":
-            return (self.evaluate_expression(expression_node.dict['op1']) + self.evaluate_expression(expression_node.dict['op2']))
+            return (eval1 + eval2)
         elif expression_node.elem_type == "-":
-            return (self.evaluate_expression(expression_node.dict['op1']) - self.evaluate_expression(expression_node.dict['op2']))
+            return (eval1 - eval2)
         elif expression_node.elem_type == "*":
-            return (self.evaluate_expression(expression_node.dict['op1']) * self.evaluate_expression(expression_node.dict['op2']))
+            return (eval1 * eval2)
         elif expression_node.elem_type == "/":
             # integer division
-            return (self.evaluate_expression(expression_node.dict['op1']) // self.evaluate_expression(expression_node.dict['op2']))
+            return (eval1 // eval2)
 
 
     def evaluate_unary_operator(self, expression_node):
         # can be 'neg' (-b) or  '!' for boolean
         #self.output(expression_node)
+        eval = self.evaluate_expression(expression_node.dict['op1'])
         if expression_node.elem_type == "neg":
-            return -(self.evaluate_expression(expression_node.dict['op1']))
+            return -(eval)
         if expression_node.elem_type == "!":
-            #self.output(expression_node)
-            return not (self.evaluate_expression(expression_node.dict['op1']))
+            if not (type(eval) == bool):
+                super().error(ErrorType.TYPE_ERROR, "'Not' can only be used on boolean values.")
+            return not (eval)
         
     # there's probably a better way to do this but oh well
     def evaluate_comparison_operator(self, expression_node):
+        eval1 = self.evaluate_expression(expression_node.dict['op1'])
+        eval2 = self.evaluate_expression(expression_node.dict['op2'])
+        # != and == can compare different types.
+        if (expression_node.elem_type not in ["!=", "=="]) and (type(eval1) is not type(eval2)):
+            super().error(ErrorType.TYPE_ERROR, "Comparison arguments must be of same type.")
         match expression_node.elem_type:
             case '<':
-                return (self.evaluate_expression(expression_node.dict['op1']) < self.evaluate_expression(expression_node.dict['op2']))
+                return (eval1 < eval2)
             case '<=':
-                return (self.evaluate_expression(expression_node.dict['op1']) <= self.evaluate_expression(expression_node.dict['op2']))
+                return (eval1 <= eval2)
             case '==':
-                return (self.evaluate_expression(expression_node.dict['op1']) == self.evaluate_expression(expression_node.dict['op2']))
+                return (eval1 == eval2)
             case '>=':
-                return (self.evaluate_expression(expression_node.dict['op1']) >= self.evaluate_expression(expression_node.dict['op2']))
+                return (eval1 >= eval2)
             case '>':
-                return (self.evaluate_expression(expression_node.dict['op1']) > self.evaluate_expression(expression_node.dict['op2']))
+                return (eval1 > eval2)
             case '!=': 
-                return (self.evaluate_expression(expression_node.dict['op1']) != self.evaluate_expression(expression_node.dict['op2']))  
+                return (eval1 != eval2)  
     
     def evaluate_binary_boolean_operator(self, expression_node):
+        eval1 = self.evaluate_expression(expression_node.dict['op1'])
+        eval2 = self.evaluate_expression(expression_node.dict['op2'])
+        # forces evaluation on both (strict evaluation)
+        eval1 = bool(eval1)
+        eval2 = bool(eval2)
+        
         match expression_node.elem_type:
             case '&&':
-                return (self.evaluate_expression(expression_node.dict['op1']) and self.evaluate_expression(expression_node.dict['op2']))
+                return (eval1 and eval2)
             case '||':
-                return (self.evaluate_expression(expression_node.dict['op1']) or self.evaluate_expression(expression_node.dict['op2']))
+                return (eval1 or eval2)
     # No more functions remain... for now... :)
 
 program = """
             func main() {
-                var x;
-                x = "hello";
-                var y;
-                y = inputs("input a string pls");
-                print(y);
+            var c;
+            c = 10;
+            if (c == 10) {
+            var c;     /* variable of the same name as outer variable */
+            c = "hi";
+            print(c);  /* prints "hi"; the inner c shadows the outer c*/
+            }
+            print(c); /* prints 10 */
             }
             """
 interpreter = Interpreter()
