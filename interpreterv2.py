@@ -276,13 +276,17 @@ class Interpreter(InterpreterBase):
 
         condition = statement_node.dict['condition']
         # error if condition is non-boolean
-        if type(condition) is not bool:
-            super().error(ErrorType.TYPE_ERROR, "Condition is not of type bool",)
+        # if type(condition) is not bool:
+        #     self.output(condition)
+        #     super().error(ErrorType.TYPE_ERROR, "Condition is not of type bool",)
 
         statements = statement_node.dict['statements']
         
         # Run the loop again (exits on condition false)
         while self.evaluate_expression(condition):
+            if type(self.evaluate_expression(condition)) is not bool:
+                self.output(condition)
+                super().error(ErrorType.TYPE_ERROR, "Condition is not of type bool",)
             #self.output(f"RUNNING LOOP.")
             for statement in statements:
                 #self.output(statement)
@@ -378,16 +382,18 @@ class Interpreter(InterpreterBase):
         # can *only* be +, -, *, / for now.
         # returns arg1 - arg2 (allows for nested/recursive calls should something like 5+8-6 happen)
         # self.output(expression_node)
+        
         eval1 = self.evaluate_expression(expression_node.dict['op1'])
         eval2 = self.evaluate_expression(expression_node.dict['op2'])
         # for all operators other than + (for concat), both must be of type 'int'
         if (expression_node.elem_type != "+") and not (isinstance(eval1, int) and isinstance(eval2,int)):
             super().error(ErrorType.TYPE_ERROR, "Arguments must be of type 'int'.")
         # if + and ...
-        elif not ((isinstance(eval1, int) and isinstance(eval2,int)) or ((isinstance(eval1, str) and isinstance(eval2,str)))):
-            # self.output(f"type 1: {type(eval1)}, type 2: {type(eval2)}")
+        elif not ((type(eval1) == int and type(eval2) == int) or (type(eval1) == str and type(eval2) == str)):
             super().error(ErrorType.TYPE_ERROR, "Types for + must be both of type int or string.")
+
         if expression_node.elem_type == "+":
+            
             return (eval1 + eval2)
         elif expression_node.elem_type == "-":
             return (eval1 - eval2)
@@ -447,16 +453,13 @@ class Interpreter(InterpreterBase):
                 return (eval1 or eval2)
     # No more functions remain... for now... :)
 
-program = """
-func main() {
-  var c;
-  c = 10;
-  if (c == 10) {
-    c = "hi";  /* reassigning c from the outer-block */
-    print(c);  /* prints "hi" */
-  }
-  print(c); /* prints “hi” */
-}
-            """
-interpreter = Interpreter()
-interpreter.run(program)
+# program = """
+#             func main() {
+#                 var a;
+#                 a = true + 5;
+#                 print(a);
+#                 }
+
+#             """
+# interpreter = Interpreter()
+# interpreter.run(program)
