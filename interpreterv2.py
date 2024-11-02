@@ -20,6 +20,7 @@ class Interpreter(InterpreterBase):
         #self.output(ast)
         self.variable_name_to_value = {} # dict to hold vars
         self.func_defs = self.get_func_defs(ast)
+        
         main_func_node = self.get_main_func_node(ast)
         #self.output(main_func_node)
         self.run_func(main_func_node)
@@ -27,6 +28,7 @@ class Interpreter(InterpreterBase):
     # grabs all globally defined functions to call when needed.
     def get_func_defs(self, ast):
         # returns functions sub-dict, 'functions' is key
+        
         return ast.dict['functions']
 
     # returns 'main' func node from the dict input.
@@ -34,8 +36,10 @@ class Interpreter(InterpreterBase):
 
         # checks for function whose name is 'main'
         for func in self.func_defs:
+            
             if func.dict['name'] == "main":
                 return func
+            
         
         # define error for 'main' not found.
         super().error(ErrorType.NAME_ERROR, "No main() function was found")
@@ -45,22 +49,28 @@ class Interpreter(InterpreterBase):
     def run_func(self, func_node):
         # statements key for sub-dict.
         self.variable_scope_stack.append({})
+        #self.output(f"function: {func_node}")
         for statement in func_node.dict['statements']:
+            #self.output(f"statement: {statement}")
             return_value = self.run_statement(statement)
             # I dont think i can just do 'if return_value:' incase its an int
-            if return_value is not None:
-                # Copilot (+1)
-                break
 
-                #end scope early
-                self.variable_scope_stack.pop()
-                return return_value
+            ## including below broke function overloading##
+            # if return_value is not None:
+            #     # Copilot (+1)
+            #     #end scope early
+            #     self.variable_scope_stack.pop()
+            #     return return_value
+
             #self.output(statement_node)
+        # for statement in func_node.dict['statements']:
+        #     self.output(f"statement: {statement}")
         self.variable_scope_stack.pop()
         return return_value
     
 
     def run_statement(self, statement_node):
+        #print(f"Running statement: {statement_node}")
         if self.is_definition(statement_node):
             #self.output(f"doing definition: {statement_node}")
             self.do_definition(statement_node)
@@ -74,6 +84,7 @@ class Interpreter(InterpreterBase):
             return self.do_if_statement(statement_node)
         elif self.is_for_loop(statement_node):
             return self.do_for_loop(statement_node)
+        return None
 
 
     
@@ -82,6 +93,7 @@ class Interpreter(InterpreterBase):
     def is_assignment(self, statement_node):
         return (True if statement_node.elem_type == "=" else False)
     def is_func_call(self, statement_node):
+        
         return (True if statement_node.elem_type == "fcall" else False)
     def is_return_statement(self, statement_node):
         return (True if statement_node.elem_type == "return" else False)
@@ -119,6 +131,7 @@ class Interpreter(InterpreterBase):
 
     # Allows function overloading by first searching for func_defs for a matching name and arg length
     def get_func_def(self, func_call, arg_len):
+        #self.output(f"call: {func_call}, args: {arg_len}")
         for func in self.func_defs:
             if func.dict['name'] == func_call and len(func.dict['args']) == arg_len:
                 return func
@@ -130,9 +143,13 @@ class Interpreter(InterpreterBase):
     
 
     def do_func_call(self, statement_node):
-        
+        #self.output(statement_node)
         func_call = statement_node.dict['name']
+        #self.output(f"Calling function: {func_call}")
+        #for arg in statement_node.dict['args']:
+            #self.output(arg)
         #self.output(func_call)
+        #self.output(f"args: {statement_node.dict['args']}")
         if func_call == "print":
             output = ""
             # loop through each arg in args list for print, evaluate their expressions, concat, and output.
@@ -168,17 +185,14 @@ class Interpreter(InterpreterBase):
                                 f"Function {func_call} was not found",
                                 )
             # If reach here, function must be valid; grab function definition
+            
             func_def = self.get_func_def(func_call, len(statement_node.dict['args']))
             ##### Start Function Call ######
-            # Copilot suggested this idea to just copy the calling functions variables
-            # Citing copilot for just direct line below. AI code count: 1 line
-            #parent_vardefs = self.variable_name_to_value.copy()
 
             #### START SCOPE ####
             self.variable_scope_stack.append({})
 
             # Assign parameters to the local variable dict
-
             args = statement_node.dict['args'] # passed in arguments
             params = func_def.dict['args'] # function parameters
 
@@ -254,14 +268,6 @@ class Interpreter(InterpreterBase):
 
         # Copilot (+1)
         self.variable_scope_stack.pop()
-        # for var in list(self.variable_name_to_value.keys()): 
-        #     if var not in pre_scope_vars: 
-        #         del self.variable_name_to_value[var]
-        ## spec is confusing, one area said to keep the change, other said to shadow, gonna discard for now ##
-        # reset to old vars **BUT KEEP CHANGED VARS**
-        # new_vars = self.variable_name_to_value.copy()
-        # # use dict comprehension?
-        # self.variable_name_to_value = {name: val for name,val in new_vars.items() if name in pre_scope_vars.keys()  }
 
 
     def do_for_loop(self, statement_node):
@@ -275,17 +281,12 @@ class Interpreter(InterpreterBase):
         self.run_statement(init_node)
 
         condition = statement_node.dict['condition']
-        # error if condition is non-boolean
-        # if type(condition) is not bool:
-        #     self.output(condition)
-        #     super().error(ErrorType.TYPE_ERROR, "Condition is not of type bool",)
 
         statements = statement_node.dict['statements']
         
         # Run the loop again (exits on condition false)
         while self.evaluate_expression(condition):
             if type(self.evaluate_expression(condition)) is not bool:
-                self.output(condition)
                 super().error(ErrorType.TYPE_ERROR, "Condition is not of type bool",)
             #self.output(f"RUNNING LOOP.")
             for statement in statements:
@@ -453,13 +454,21 @@ class Interpreter(InterpreterBase):
                 return (eval1 or eval2)
     # No more functions remain... for now... :)
 
-# program = """
-#             func main() {
-#                 var a;
-#                 a = true + 5;
-#                 print(a);
-#                 }
+program = """
+            func foo(a) {
+                print(a+1);
+            }
 
-#             """
-# interpreter = Interpreter()
-# interpreter.run(program)
+            func foo(a,b) {
+                print(a+2);
+                print(b+2);
+            }
+
+            func main() {
+                foo(1);
+                foo(1,2);
+                }
+
+            """
+interpreter = Interpreter()
+interpreter.run(program)
