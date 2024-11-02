@@ -117,13 +117,23 @@ class Interpreter(InterpreterBase):
             for arg in statement_node.dict['args']:
                 # note, cant concat unles its str type
                 output += str(self.evaluate_expression(arg))
-            # THIS IS 1/2 OF ONLY REAL SELF.OUTPUT
+            # THIS IS 1/3 OF ONLY REAL SELF.OUTPUT
             self.output(output)
         elif func_call == "inputi":
             output = ""
             for arg in statement_node.dict['args']:
                 output += str(self.evaluate_expression(arg))
-            # THIS IS 2/2 OF ONLY REAL SELF.OUTPUT
+            # THIS IS 2/3 OF ONLY REAL SELF.OUTPUT
+            if output != "":
+                self.output(output)
+            return self.get_input()
+        
+        # same as inputi but for strings
+        elif func_call == "inputs":
+            output = ""
+            for arg in statement_node.dict['args']:
+                output += str(self.evaluate_expression(arg))
+            # THIS IS 3/3 OF ONLY REAL SELF.OUTPUT
             if output != "":
                 self.output(output)
             return self.get_input()
@@ -198,7 +208,6 @@ class Interpreter(InterpreterBase):
         self.variable_name_to_value = pre_scope_vars
 
     def do_for_loop(self, statement_node):
-        self.output(statement_node)
         pre_scope_vars = self.variable_name_to_value.copy()
         ### BEGIN FOR SCOPE ###
 
@@ -211,18 +220,16 @@ class Interpreter(InterpreterBase):
         
         # Run the loop again (exits on condition false)
         while self.evaluate_expression(condition):
-            self.output(f"RUNNING LOOP.")
+            #self.output(f"RUNNING LOOP.")
             for statement in statements:
                 self.run_statement(statement)
             
             update = statement_node.dict['update']
-            self.output(self.variable_name_to_value)
             self.run_statement(update)
-            self.output(self.variable_name_to_value)
             
-            #self.do_for_loop(statement_node)
         # Exits if condition if false, for loop ends
-        self.output(f"END OF SCOPE REACHED.")
+        #self.output(f"END OF SCOPE REACHED.")\
+
         ### END FOR SCOPE ###
         # reset to old vars
         self.variable_name_to_value = pre_scope_vars
@@ -331,14 +338,13 @@ class Interpreter(InterpreterBase):
     # No more functions remain... for now... :)
 
 program = """
-
-
             func main() {
-            var i;
-                for (i = 3; i > 0; i = i - 1) {
-                print(i);
-                }
-            }          
+                var x;
+                x = "hello";
+                var y;
+                y = inputs("input a string pls");
+                print(y);
+            }
             """
 interpreter = Interpreter()
 interpreter.run(program)
