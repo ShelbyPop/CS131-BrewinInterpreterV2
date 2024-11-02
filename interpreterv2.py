@@ -237,7 +237,7 @@ class Interpreter(InterpreterBase):
 
 
         
-
+    # helper functions
     def get_target_variable_name(self, statement_node):
         return statement_node.dict['name']
     def var_name_exists(self, varname):
@@ -246,6 +246,7 @@ class Interpreter(InterpreterBase):
         return statement_node.dict['expression']
     
 
+    # basically pseudocode, self-explanatory
     def is_value_node(self, expression_node):
         return True if (expression_node.elem_type in ["int", "string", "bool", "nil"]) else False
     def is_variable_node(self, expression_node):
@@ -260,6 +261,7 @@ class Interpreter(InterpreterBase):
         return True if (expression_node.elem_type in ['&&', '||']) else False
 
 
+    # basically pseudcode, self-explanatory
     def evaluate_expression(self, expression_node):
         #self.output(f"expressing: {expression_node}")
         if self.is_value_node(expression_node):
@@ -315,6 +317,7 @@ class Interpreter(InterpreterBase):
             #self.output(expression_node)
             return not (self.evaluate_expression(expression_node.dict['op1']))
         
+    # there's probably a better way to do this but oh well
     def evaluate_comparison_operator(self, expression_node):
         match expression_node.elem_type:
             case '<':
@@ -329,6 +332,7 @@ class Interpreter(InterpreterBase):
                 return (self.evaluate_expression(expression_node.dict['op1']) > self.evaluate_expression(expression_node.dict['op2']))
             case '!=': 
                 return (self.evaluate_expression(expression_node.dict['op1']) != self.evaluate_expression(expression_node.dict['op2']))  
+    
     def evaluate_binary_boolean_operator(self, expression_node):
         match expression_node.elem_type:
             case '&&':
