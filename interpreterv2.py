@@ -1,7 +1,7 @@
 # Author: Shelby Falde
 # Course: CS131
 
-from brewparse import parse_program
+from brewparse import *
 from intbase import *
 
 class Interpreter(InterpreterBase):
@@ -130,6 +130,7 @@ class Interpreter(InterpreterBase):
     
 
     def do_func_call(self, statement_node):
+        
         func_call = statement_node.dict['name']
         #self.output(func_call)
         if func_call == "print":
@@ -168,7 +169,6 @@ class Interpreter(InterpreterBase):
                                 )
             # If reach here, function must be valid; grab function definition
             func_def = self.get_func_def(func_call, len(statement_node.dict['args']))
-            
             ##### Start Function Call ######
             # Copilot suggested this idea to just copy the calling functions variables
             # Citing copilot for just direct line below. AI code count: 1 line
@@ -191,13 +191,15 @@ class Interpreter(InterpreterBase):
                 self.variable_scope_stack[-1][var_name] = self.evaluate_expression(args[i])
                 # self.do_assignment(self.evaluate_expression(args[i]))
                 #scoped_vars[params[i].dict['name']] = self.evaluate_expression(args[i])
-    
+            
             return_value = self.run_func(func_def)
             #self.output(return_value)
             # NOTE: for if or for, remember to check the copied vars above
             
             #### END SCOPE ####
             self.variable_scope_stack.pop()
+            if not return_value:
+                return Element("nil").elem_type
             return return_value
             # Re-establish old values.
             #self.variable_name_to_value = parent_vardefs
@@ -205,6 +207,10 @@ class Interpreter(InterpreterBase):
             ##### End Function Call ######
     
     def do_return_statement(self, statement_node):
+        if not statement_node.dict['expression']:
+            #return 'nil' Element
+            return Element("nil").elem_type
+       
         return self.evaluate_expression(statement_node.dict['expression'])
 
     # Scope rules: Can access parent calling vars, but vars they create are deleted after scope.
@@ -345,28 +351,27 @@ class Interpreter(InterpreterBase):
 
     def get_value(self, expression_node):
         # Returns value assigned to key 'val'
+        if expression_node.elem_type == "nil":
+            return Element("nil").elem_type
         return expression_node.dict['val']
     def get_value_of_variable(self, expression_node):
         # returns value under the variable name provided.
-        # NEED TO CATCH: if var NOT ASSIGNED VALUE YET: ex: {var x; print(x);}
-        # NOTE this is how its done in barista, feels bad if we were to add concatonation in future, or something else. NOT FUTURE PROOF.
+        
+        if expression_node == 'nil':
+            return Element("nil").elem_type
+        
         # Copilot (+9)
         var_name = expression_node.dict['name']
         for scope in reversed(self.variable_scope_stack): 
             if var_name in scope: 
                 val = scope[var_name] 
                 if val is None:
-                    return 0 
+                    return Element("nil").elem_type
                 else: 
                     return val 
         # self.output(self.variable_scope_stack)
         super().error(ErrorType.NAME_ERROR, f"variable '{var_name}' used and not declared")
-        
-        # val = self.variable_name_to_value[expression_node.dict['name']]
-        # if val is None:
-        #     return 0
-        # else:
-        #     return val
+
 
     # + or -
     def evaluate_binary_operator(self, expression_node):
@@ -379,7 +384,7 @@ class Interpreter(InterpreterBase):
         if (expression_node.elem_type != "+") and not (isinstance(eval1, int) and isinstance(eval2,int)):
             super().error(ErrorType.TYPE_ERROR, "Arguments must be of type 'int'.")
         # if + and ...
-        elif not  ((isinstance(eval1, int) and isinstance(eval2,int))) or ((isinstance(eval1, str) and isinstance(eval2,str))):
+        elif not ((isinstance(eval1, int) and isinstance(eval2,int)) or ((isinstance(eval1, str) and isinstance(eval2,str)))):
             # self.output(f"type 1: {type(eval1)}, type 2: {type(eval2)}")
             super().error(ErrorType.TYPE_ERROR, "Types for + must be both of type int or string.")
         if expression_node.elem_type == "+":
@@ -408,6 +413,7 @@ class Interpreter(InterpreterBase):
     def evaluate_comparison_operator(self, expression_node):
         eval1 = self.evaluate_expression(expression_node.dict['op1'])
         eval2 = self.evaluate_expression(expression_node.dict['op2'])
+        #self.output(f"== #1: {eval1} \n #2: {eval2}")
         # != and == can compare different types.
         if (expression_node.elem_type not in ["!=", "=="]) and (type(eval1) is not type(eval2)):
             super().error(ErrorType.TYPE_ERROR, "Comparison arguments must be of same type.")
@@ -429,8 +435,10 @@ class Interpreter(InterpreterBase):
         eval1 = self.evaluate_expression(expression_node.dict['op1'])
         eval2 = self.evaluate_expression(expression_node.dict['op2'])
         # forces evaluation on both (strict evaluation)
+        #self.output(f"&& #1: {eval1} \n #2: {eval2}")
         eval1 = bool(eval1)
         eval2 = bool(eval2)
+        #self.output(f"&& #1: {eval1} \n #2: {eval2}")
         
         match expression_node.elem_type:
             case '&&':
@@ -440,21 +448,15 @@ class Interpreter(InterpreterBase):
     # No more functions remain... for now... :)
 
 program = """
-            func factorial(n) {
-                if (n == 0) {
-                    return 1;
-                } else {
-                    return n * factorial(n - 1);
-                }
-            }
-
-            func main() {
-                var result;
-                result = factorial(5);
-                print(result); 
-            }
-
-
+func main() {
+  var c;
+  c = 10;
+  if (c == 10) {
+    c = "hi";  /* reassigning c from the outer-block */
+    print(c);  /* prints "hi" */
+  }
+  print(c); /* prints “hi” */
+}
             """
 interpreter = Interpreter()
 interpreter.run(program)
