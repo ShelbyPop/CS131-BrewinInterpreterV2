@@ -250,8 +250,6 @@ class Interpreter(InterpreterBase):
         if condition:
             for statement in statements:
                 #self.output(statement)
-                if statement.elem_type == "return": 
-                    return self.do_return_statement(statement)
                 return_value = self.run_statement(statement)
                 #self.output(return_value)
                 # I dont think i can just do 'if return_value:' incase its an int
@@ -264,8 +262,6 @@ class Interpreter(InterpreterBase):
         else:
             if else_statements:
                 for else_statement in else_statements:
-                    if else_statement.elem_type == "return": 
-                        return self.do_return_statement(statement)
                     return_value = self.run_statement(else_statement)
                     # I dont think i can just do 'if return_value:' incase its an int
                     if return_value is not None:
@@ -457,17 +453,27 @@ class Interpreter(InterpreterBase):
 
 #DEBUGGING
 program = """
-func factorial(n) {
+func catalan(n) {
     if (n <= 1) {
         return 1;
     }
-    return n * factorial(n - 1);
+    var res;
+    res = 0;
+    var i;
+    for (i = 0; i < n; i = i + 1) {
+        res = res + catalan(i) * catalan(n - i - 1);
+    }
+    return res;
 }
 
 func main() {
-    print(factorial(5));  /* Expect 120 */
-    print(factorial(0));  /* Expect 1 */
+    print(catalan(0));  /* Expect 1 */
+    print(catalan(1));  /* Expect 1 */
+    print(catalan(2));  /* Expect 2 */
+    print(catalan(3));  /* Expect 5 */
+    print(catalan(4));  /* Expect 14 */
 }
+
 """
 interpreter = Interpreter()
 interpreter.run(program)
