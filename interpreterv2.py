@@ -46,18 +46,21 @@ class Interpreter(InterpreterBase):
     # self explanatory
     def run_func(self, func_node):
         # statements key for sub-dict.
+        ### BEGIN FUNC SCOPE ###
         self.variable_scope_stack.append({})
+        return_value = None
         #self.output(f"function: {func_node}")
         for statement in func_node.dict['statements']:
-
             return_value = self.run_statement(statement)
             #self.output(f"Returned: {return_value} from statement: {statement.elem_type}")
-            
-            if return_value is None: 
-                #self.output(f"returned: {return_value}")
-                return_value = nil
-                #break # Exit loop once a return statement is hit
+            #self.output(f"Running statement: {statement}, of type: {statement.elem_type}, return value: {return_value}")
+            if return_value is not None: 
+                break # Exit loop once a return statement is hit
+
+        ### END FUNC SCOPE ###
         self.variable_scope_stack.pop()
+        if return_value is nil:
+            return_value = nil
         return return_value
     
 
@@ -77,7 +80,6 @@ class Interpreter(InterpreterBase):
         elif self.is_for_loop(statement_node):
             return self.do_for_loop(statement_node)
         return None
-
 
     
     def is_definition(self, statement_node):
@@ -234,21 +236,22 @@ class Interpreter(InterpreterBase):
     # Scope rules: Can access parent calling vars, but vars they create are deleted after scope.
     # So, keep track of what vars were before, and after end of clause, wipe those variables.
     def do_if_statement(self, statement_node):
-
-        ### BEGIN IF SCOPE ###
         condition = statement_node.dict['condition']
         condition = self.evaluate_expression(condition)
         # error if condition is non-boolean
         if type(condition) is not bool:
             super().error(ErrorType.TYPE_ERROR, "Condition is not of type bool",)
-
-        # Copilot (+1)
-        self.variable_scope_stack.append({})
         statements = statement_node.dict['statements']
         else_statements = statement_node.dict['else_statements']
+
+        ### BEGIN IF SCOPE ###
+        # Copilot (+1)
+        self.variable_scope_stack.append({})
         if condition:
             for statement in statements:
                 #self.output(statement)
+                if statement.elem_type == "return": 
+                    return self.do_return_statement(statement)
                 return_value = self.run_statement(statement)
                 #self.output(return_value)
                 # I dont think i can just do 'if return_value:' incase its an int
@@ -261,6 +264,8 @@ class Interpreter(InterpreterBase):
         else:
             if else_statements:
                 for else_statement in else_statements:
+                    if else_statement.elem_type == "return": 
+                        return self.do_return_statement(statement)
                     return_value = self.run_statement(else_statement)
                     # I dont think i can just do 'if return_value:' incase its an int
                     if return_value is not None:
@@ -275,45 +280,36 @@ class Interpreter(InterpreterBase):
 
 
     def do_for_loop(self, statement_node):
-        # Copilot (+1)
-        self.variable_scope_stack.append({})
-        #pre_scope_vars = self.variable_name_to_value.copy()
-        ### BEGIN FOR SCOPE ###
-
         # Run initializer
         init_node = statement_node.dict['init']
         self.run_statement(init_node)
-
+        update = statement_node.dict['update']
         condition = statement_node.dict['condition']
-
         statements = statement_node.dict['statements']
         
         # Run the loop again (exits on condition false)
         while self.evaluate_expression(condition):
             if type(self.evaluate_expression(condition)) is not bool:
                 super().error(ErrorType.TYPE_ERROR, "Condition is not of type bool",)
+            
+            ### BEGIN VAR SCOPE ###
+            self.variable_scope_stack.append({})
+
             #self.output(f"RUNNING LOOP.")
             for statement in statements:
-                #self.output(statement)
                 return_value = self.run_statement(statement)
-                #self.output(return_value)
                 # I dont think i can just do 'if return_value:' incase its an int
                 if return_value is not None:
                     #end scope early
                     self.variable_scope_stack.pop()
                     return return_value
-                    
                     # if return needed, stop running statements, immediately return the value.
-            
-            update = statement_node.dict['update']
-            self.run_statement(update)
-            
-        # Exits if condition if false, for loop ends
-        #self.output(f"END OF SCOPE REACHED.")\
 
-        ### END FOR SCOPE ###
-        # Copilot (+1)
-        self.variable_scope_stack.pop()
+            ### END VAR SCOPE ###
+            self.variable_scope_stack.pop()
+            # update = statement_node.dict['update']
+            self.run_statement(update)
+        
         
     # helper functions
     def get_target_variable_name(self, statement_node):
@@ -461,21 +457,17 @@ class Interpreter(InterpreterBase):
 
 #DEBUGGING
 program = """
-            func foo() { 
-                print("hello");
-                /* no explicit return command */
-                }
+func factorial(n) {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
 
-                func bar() {
-                return;  /* no return value specified */
-                }
-
-            func main() {
-                var val;
-                val = nil;
-                if (foo() == val && bar() == nil) { 
-                    print("this should print!");
-                }
-            }"""
+func main() {
+    print(factorial(5));  /* Expect 120 */
+    print(factorial(0));  /* Expect 1 */
+}
+"""
 interpreter = Interpreter()
 interpreter.run(program)
