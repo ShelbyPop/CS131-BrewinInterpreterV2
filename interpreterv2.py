@@ -19,12 +19,8 @@ class Interpreter(InterpreterBase):
     def run(self, program):
 
         ast = parse_program(program) # returns list of function nodes
-        #self.output(ast)
-        self.variable_name_to_value = {} # dict to hold vars
         self.func_defs = self.get_func_defs(ast)
-        
         main_func_node = self.get_main_func_node(ast)
-        #self.output(main_func_node)
         self.run_func(main_func_node)
 
     # grabs all globally defined functions to call when needed.
@@ -56,10 +52,11 @@ class Interpreter(InterpreterBase):
 
             return_value = self.run_statement(statement)
             #self.output(f"Returned: {return_value} from statement: {statement.elem_type}")
-            # I dont think i can just do 'if return_value:' incase its an int
-
-            if return_value is not None: 
-                break # Exit loop once a return statement is hit
+            
+            if return_value is None: 
+                #self.output(f"returned: {return_value}")
+                return_value = nil
+                #break # Exit loop once a return statement is hit
         self.variable_scope_stack.pop()
         return return_value
     
@@ -102,19 +99,25 @@ class Interpreter(InterpreterBase):
         # just add to var_name_to_value dict
         target_var_name = self.get_target_variable_name(statement_node)
         # Copilot (+1)
-        self.variable_scope_stack[-1][target_var_name] = None
+        if target_var_name in self.variable_scope_stack[-1]:
+            super().error(ErrorType.NAME_ERROR, f"Variable {target_var_name} defined more than once",)
+        else:
+            #self.output(f"vars: {self.variable_scope_stack}")
+            self.variable_scope_stack[-1][target_var_name] = None
+        #self.variable_scope_stack[-1][target_var_name] = None
         
 
     def do_assignment(self, statement_node):
+        
         target_var_name = self.get_target_variable_name(statement_node)
-        source_node = self.get_expression_node(statement_node)
-        resulting_value = self.evaluate_expression(source_node)
-
         # Copilot (+5)
         for scope in reversed(self.variable_scope_stack): 
             if target_var_name in scope: 
+                # Does not evaluate until after checking if valid variable
+                source_node = self.get_expression_node(statement_node)
+                resulting_value = self.evaluate_expression(source_node)
                 scope[target_var_name] = resulting_value 
-                return 
+                return
         super().error(ErrorType.NAME_ERROR, f"variable used and not declared: {target_var_name}")
 
     # Check if function is defined
@@ -154,13 +157,21 @@ class Interpreter(InterpreterBase):
             # THIS IS 1/3 OF ONLY REAL SELF.OUTPUT
             self.output(output)
         elif func_call == "inputi":
-            output = ""
-            for arg in statement_node.dict['args']:
-                output += str(self.evaluate_expression(arg))
-            # THIS IS 2/3 OF ONLY REAL SELF.OUTPUT
-            if output != "":
-                self.output(output)
-            return self.get_input()
+            # too many inputi params
+            if len(statement_node.dict['args']) > 1:
+                super().error(ErrorType.NAME_ERROR,f"No inputi() function found that takes > 1 parameter",)
+            elif len(statement_node.dict['args']) == 1:
+                arg = statement_node.dict['args'][0]
+                # THIS IS 2/2 OF ONLY REAL SELF.OUTPUT
+                self.output(self.evaluate_expression(arg))
+                #output = str(self.evaluate_expression(arg))
+
+            user_in = super().get_input()
+            try:
+                user_in = int(user_in)
+                return user_in
+            except:
+                return user_in
         
         # same as inputi but for strings
         elif func_call == "inputs":
@@ -358,7 +369,7 @@ class Interpreter(InterpreterBase):
         if expression_node == 'nil':
             return nil
         
-        # Copilot (+9)
+        # Copilot (+4)
         var_name = expression_node.dict['name']
         for scope in reversed(self.variable_scope_stack): 
             if var_name in scope: 
@@ -380,6 +391,7 @@ class Interpreter(InterpreterBase):
         # for all operators other than + (for concat), both must be of type 'int'
         if (expression_node.elem_type != "+") and not (isinstance(eval1, int) and isinstance(eval2,int)):
             super().error(ErrorType.TYPE_ERROR, "Arguments must be of type 'int'.")
+        # note, the line below looked like above 'isinstance' but i just made it this because instance was bugging (probably just had bad () lol)
         # if + and ...
         elif not ((type(eval1) == int and type(eval2) == int) or (type(eval1) == str and type(eval2) == str)):
             super().error(ErrorType.TYPE_ERROR, "Types for + must be both of type int or string.")
@@ -410,6 +422,8 @@ class Interpreter(InterpreterBase):
     def evaluate_comparison_operator(self, expression_node):
         eval1 = self.evaluate_expression(expression_node.dict['op1'])
         eval2 = self.evaluate_expression(expression_node.dict['op2'])
+        #self.output(f"expression: {expression_node}")
+        #self.output(f"== #1: {expression_node.dict['op1']} \n #2: {expression_node.dict['op2']}")
         #self.output(f"== #1: {eval1} \n #2: {eval2}")
         # != and == can compare different types.
         if (expression_node.elem_type not in ["!=", "=="]) and (type(eval1) is not type(eval2)):
@@ -437,6 +451,7 @@ class Interpreter(InterpreterBase):
         eval2 = bool(eval2)
         #self.output(f"&& #1: {eval1} \n #2: {eval2}")
         
+        #self.output(f"expression: {expression_node}")
         match expression_node.elem_type:
             case '&&':
                 return (eval1 and eval2)
@@ -444,17 +459,23 @@ class Interpreter(InterpreterBase):
                 return (eval1 or eval2)
     # No more functions remain... for now... :)
 
+#DEBUGGING
 program = """
-func foo(n) {
-    return n+1;
-    print("DOH");
-}
+            func foo() { 
+                print("hello");
+                /* no explicit return command */
+                }
 
-func main() {
-    print(foo(1)); 
-}
+                func bar() {
+                return;  /* no return value specified */
+                }
 
-
-            """
+            func main() {
+                var val;
+                val = nil;
+                if (foo() == val && bar() == nil) { 
+                    print("this should print!");
+                }
+            }"""
 interpreter = Interpreter()
 interpreter.run(program)
