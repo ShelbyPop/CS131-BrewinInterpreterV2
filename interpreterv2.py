@@ -4,6 +4,8 @@
 from brewparse import *
 from intbase import *
 
+nil = Element("nil")
+
 class Interpreter(InterpreterBase):
     def __init__(self, console_output=True, inp=None, trace_output=False):
         super().__init__(console_output, inp)   # call InterpreterBase's constructor
@@ -51,20 +53,13 @@ class Interpreter(InterpreterBase):
         self.variable_scope_stack.append({})
         #self.output(f"function: {func_node}")
         for statement in func_node.dict['statements']:
-            #self.output(f"statement: {statement}")
+
             return_value = self.run_statement(statement)
+            #self.output(f"Returned: {return_value} from statement: {statement.elem_type}")
             # I dont think i can just do 'if return_value:' incase its an int
 
-            ## including below broke function overloading##
-            # if return_value is not None:
-            #     # Copilot (+1)
-            #     #end scope early
-            #     self.variable_scope_stack.pop()
-            #     return return_value
-
-            #self.output(statement_node)
-        # for statement in func_node.dict['statements']:
-        #     self.output(f"statement: {statement}")
+            if return_value is not None: 
+                break # Exit loop once a return statement is hit
         self.variable_scope_stack.pop()
         return return_value
     
@@ -212,8 +207,6 @@ class Interpreter(InterpreterBase):
             
             #### END SCOPE ####
             self.variable_scope_stack.pop()
-            if not return_value:
-                return Element("nil").elem_type
             return return_value
             # Re-establish old values.
             #self.variable_name_to_value = parent_vardefs
@@ -223,7 +216,7 @@ class Interpreter(InterpreterBase):
     def do_return_statement(self, statement_node):
         if not statement_node.dict['expression']:
             #return 'nil' Element
-            return Element("nil").elem_type
+            return nil
        
         return self.evaluate_expression(statement_node.dict['expression'])
 
@@ -357,13 +350,13 @@ class Interpreter(InterpreterBase):
     def get_value(self, expression_node):
         # Returns value assigned to key 'val'
         if expression_node.elem_type == "nil":
-            return Element("nil").elem_type
+            return nil
         return expression_node.dict['val']
     def get_value_of_variable(self, expression_node):
         # returns value under the variable name provided.
         
         if expression_node == 'nil':
-            return Element("nil").elem_type
+            return nil
         
         # Copilot (+9)
         var_name = expression_node.dict['name']
@@ -371,7 +364,7 @@ class Interpreter(InterpreterBase):
             if var_name in scope: 
                 val = scope[var_name] 
                 if val is None:
-                    return Element("nil").elem_type
+                    return nil
                 else: 
                     return val 
         # self.output(self.variable_scope_stack)
@@ -381,9 +374,7 @@ class Interpreter(InterpreterBase):
     # + or -
     def evaluate_binary_operator(self, expression_node):
         # can *only* be +, -, *, / for now.
-        # returns arg1 - arg2 (allows for nested/recursive calls should something like 5+8-6 happen)
-        # self.output(expression_node)
-        
+
         eval1 = self.evaluate_expression(expression_node.dict['op1'])
         eval2 = self.evaluate_expression(expression_node.dict['op2'])
         # for all operators other than + (for concat), both must be of type 'int'
@@ -394,7 +385,6 @@ class Interpreter(InterpreterBase):
             super().error(ErrorType.TYPE_ERROR, "Types for + must be both of type int or string.")
 
         if expression_node.elem_type == "+":
-            
             return (eval1 + eval2)
         elif expression_node.elem_type == "-":
             return (eval1 - eval2)
@@ -455,19 +445,15 @@ class Interpreter(InterpreterBase):
     # No more functions remain... for now... :)
 
 program = """
-            func foo(a) {
-                print(a+1);
-            }
+func foo(n) {
+    return n+1;
+    print("DOH");
+}
 
-            func foo(a,b) {
-                print(a+2);
-                print(b+2);
-            }
+func main() {
+    print(foo(1)); 
+}
 
-            func main() {
-                foo(1);
-                foo(1,2);
-                }
 
             """
 interpreter = Interpreter()
