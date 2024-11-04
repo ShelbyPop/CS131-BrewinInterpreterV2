@@ -449,11 +449,9 @@ class Interpreter(InterpreterBase):
     def evaluate_comparison_operator(self, expression_node):
         eval1 = self.evaluate_expression(expression_node.dict['op1'])
         eval2 = self.evaluate_expression(expression_node.dict['op2'])
-        #self.output(f"expression: {expression_node}")
-        #self.output(f"== #1: {expression_node.dict['op1']} \n #2: {expression_node.dict['op2']}")
-        #self.output(f"== #1: {eval1} \n #2: {eval2}")
+
         # != and == can compare different types.
-        self.output(f"eval1: {eval1} eval2: {eval2}")
+        #self.output(f"eval1: {eval1} eval2: {eval2}")
         if (expression_node.elem_type not in ["!=", "=="]) and (type(eval1) != int and type(eval2) != int):
             super().error(ErrorType.TYPE_ERROR, f"Comparison args for {expression_node.elem_type} must be of same type int.",)
         match expression_node.elem_type:
@@ -502,9 +500,10 @@ func type_compare(a, b) {
 }
 
 func main() {
-
-    print("abc" >"abd");
-
+    print(type_compare(5, 5));
+    print(type_compare(10, 5));
+    print("a" + "b" == "ab");
+    print(5 + 3 == "8");
 }
 """
 interpreter = Interpreter()
