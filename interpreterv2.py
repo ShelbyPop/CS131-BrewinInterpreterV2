@@ -48,23 +48,28 @@ class Interpreter(InterpreterBase):
         # statements key for sub-dict.
         ### BEGIN FUNC SCOPE ###
         self.variable_scope_stack.append({})
+        
         return_value = nil
         #self.output(f"function: {func_node}")
         for statement in func_node.dict['statements']:
             return_value = self.run_statement(statement)
-            #self.output(f"Returned: {return_value} from statement: {statement.elem_type}")
-            #self.output(f"Running statement: {statement}, of type: {statement.elem_type}, return value: {return_value}")
-            if return_value is not nil: 
-                #self.output(f"Breaking because statement {statement} returned: {return_value}")
-                break # Stop running statements once a return statement is hit
-
+            #self.output(f"returned: {return_value}")
+            # check if statement results in a return, and return a return statement with 
+            if isinstance(return_value, Element) and return_value.elem_type == "return":
+                # Return the value, dont need to continue returning.
+                #self.output(return_value)
+                #self.output(f"statement: {statement}, \n vars: {self.variable_scope_stack}")
+                #self.output(self.variable_scope_stack)
+                self.variable_scope_stack.pop()
+                #self.output(self.variable_scope_stack)
+                return return_value.get("value")
+            if return_value is not nil:
+                break
+      
         ### END FUNC SCOPE ###
+        #self.output(self.variable_scope_stack)
         self.variable_scope_stack.pop()
-        #self.output(return_value)
-        if return_value is None:
-            return_value = nil
-        # elif return_value is None:
-        #     return_value = nil
+        #self.output(self.variable_scope_stack)
         return return_value
     
 
@@ -113,20 +118,22 @@ class Interpreter(InterpreterBase):
             super().error(ErrorType.NAME_ERROR, f"Variable {target_var_name} defined more than once",)
         else:
             #self.output(f"vars: {self.variable_scope_stack}")
-            self.variable_scope_stack[-1][target_var_name] = nil
-        #self.variable_scope_stack[-1][target_var_name] = nil
+            self.variable_scope_stack[-1][target_var_name] = None
+        #self.variable_scope_stack[-1][target_var_name] = None
         
 
     def do_assignment(self, statement_node):
         
         target_var_name = self.get_target_variable_name(statement_node)
         # Copilot (+5)
+        #self.output(self.variable_scope_stack)
         for scope in reversed(self.variable_scope_stack): 
             if target_var_name in scope: 
                 # Does not evaluate until after checking if valid variable
                 source_node = self.get_expression_node(statement_node)
                 resulting_value = self.evaluate_expression(source_node)
                 scope[target_var_name] = resulting_value 
+                #self.output(self.variable_scope_stack)
                 return
         super().error(ErrorType.NAME_ERROR, f"variable used and not declared: {target_var_name}")
 
@@ -171,7 +178,7 @@ class Interpreter(InterpreterBase):
                 super().error(ErrorType.NAME_ERROR,f"No inputi() function found that takes > 1 parameter",)
             elif len(statement_node.dict['args']) == 1:
                 arg = statement_node.dict['args'][0]
-                # THIS IS 2/2 OF ONLY REAL SELF.OUTPUT
+                # THIS IS 2/3 OF ONLY REAL SELF.OUTPUT
                 self.output(self.evaluate_expression(arg))
                 #output = str(self.evaluate_expression(arg))
 
@@ -189,7 +196,7 @@ class Interpreter(InterpreterBase):
                 super().error(ErrorType.NAME_ERROR,f"No inputi() function found that takes > 1 parameter",)
             elif len(statement_node.dict['args']) == 1:
                 arg = statement_node.dict['args'][0]
-                # THIS IS 2/2 OF ONLY REAL SELF.OUTPUT
+                # THIS IS 3/3 OF ONLY REAL SELF.OUTPUT
                 self.output(self.evaluate_expression(arg))
                 #output = str(self.evaluate_expression(arg))
 
@@ -240,10 +247,11 @@ class Interpreter(InterpreterBase):
             ##### End Function Call ######
     
     def do_return_statement(self, statement_node):
+        #self.output(statement_node)
         if not statement_node.dict['expression']:
             #return 'nil' Element
-            return nil
-       
+            # I had the idea, Copilot (+1) showed me how to assign a val
+            return Element("return", value=nil)
         return self.evaluate_expression(statement_node.dict['expression'])
 
     # Scope rules: Can access parent calling vars, but vars they create are deleted after scope.
@@ -265,23 +273,27 @@ class Interpreter(InterpreterBase):
                 #self.output(statement)
                 return_value = self.run_statement(statement)
                 #self.output(return_value)
-                # I dont think i can just do 'if return_value:' incase its an int
-                if return_value is not nil:
-                    #end scope early
+     
+                if isinstance(return_value, Element) and return_value.elem_type == "return":
+                    #end scope early and return
                     self.variable_scope_stack.pop()
-                    return return_value
-                    
+                    return Element("return", value=return_value.get("value"))
+                elif return_value is not nil:
+                    self.variable_scope_stack.pop()
+                    return Element("return", value=return_value)
                     # if return needed, stop running statements, immediately return the value.
         else:
             if else_statements:
                 for else_statement in else_statements:
                     return_value = self.run_statement(else_statement)
-                    # I dont think i can just do 'if return_value:' incase its an int
-                    if return_value is not nil:
-                        #end scope early
+                    
+                    if isinstance(return_value, Element) and return_value.elem_type == "return":
+                        #end scope early and return
                         self.variable_scope_stack.pop()
-                        return return_value
-
+                        return Element("return", value=return_value.get("value"))
+                    elif return_value is not nil:
+                        self.variable_scope_stack.pop()
+                        return Element("return", value=return_value)
         ### END IF SCOPE ###
 
         # Copilot (+1)
@@ -297,6 +309,7 @@ class Interpreter(InterpreterBase):
         condition = statement_node.dict['condition']
         statements = statement_node.dict['statements']
         
+        #self.output(self.variable_scope_stack)
         # Run the loop again (exits on condition false)
         while self.evaluate_expression(condition):
             if type(self.evaluate_expression(condition)) is not bool:
@@ -309,16 +322,22 @@ class Interpreter(InterpreterBase):
             for statement in statements:
                 return_value = self.run_statement(statement)
                 # I dont think i can just do 'if return_value:' incase its an int
-                if return_value is not nil:
-                    #end scope early
+                if isinstance(return_value, Element) and return_value.elem_type == "return":
+                    #self.output(f"Presumably breaking. Value: {return_value} at statement: {statement_node}")
+                    #end scope early and return
                     self.variable_scope_stack.pop()
-                    return return_value
-                    # if return needed, stop running statements, immediately return the value.
+                    return Element("return", value=return_value.get("value"))
+                elif return_value is not nil:
+                    return Element("return", value=return_value)
 
             ### END VAR SCOPE ###
             self.variable_scope_stack.pop()
-            # update = statement_node.dict['update']
+            update = statement_node.dict['update']
             self.run_statement(update)
+
+        #self.output(condition)
+        #self.output(self.variable_scope_stack)
+        #self.output("exiting for")
         return nil
         
         
@@ -403,6 +422,7 @@ class Interpreter(InterpreterBase):
         elif not ((type(eval1) == int and type(eval2) == int) or (type(eval1) == str and type(eval2) == str)):
             super().error(ErrorType.TYPE_ERROR, "Types for + must be both of type int or string.")
 
+        #self.output(f"{expression_node.elem_type} #1: {eval1} \n #2: {eval2}")
         if expression_node.elem_type == "+":
             return (eval1 + eval2)
         elif expression_node.elem_type == "-":
@@ -468,27 +488,29 @@ class Interpreter(InterpreterBase):
 
 #DEBUGGING
 program = """
-func catalan(n) {
-    if (n <= 1) {
-        return 1;
-    }
-    var res;
-    res = 0;
-    var i;
-    for (i = 0; i < n; i = i + 1) {
-        res = res + catalan(i) * catalan(n - i - 1);
-    }
-    return res;
+func foo() { 
+ print("hello");
+ /* no explicit return command */
 }
+
+func bar() {
+  return;  /* no return value specified */
+}
+
 func main() {
-    print(catalan(0));  /* Expect 1 */
-    print(catalan(1));  /* Expect 1 */
-    print(catalan(2));  /* Expect 2 */
-    print(catalan(3));  /* Expect 5 */
-    print(catalan(4));  /* Expect 14 */
+   var val;
+   val = nil;
+   if (foo() == val && bar() == nil) { print("this should print!"); }
 }
 
 
 """
 interpreter = Interpreter()
 interpreter.run(program)
+
+# ret = Element("return", value="hiasdas `1239")
+# num = 6
+# lst = [ret, num]
+# for thing in lst:
+#     if isinstance(thing, Element) and thing.elem_type == "return":
+#         print(ret.get("value"))
