@@ -53,6 +53,7 @@ class Interpreter(InterpreterBase):
         #self.output(f"function: {func_node}")
         for statement in func_node.dict['statements']:
             return_value = self.run_statement(statement)
+            
             #self.output(f"returned: {return_value}")
             # check if statement results in a return, and return a return statement with 
             if isinstance(return_value, Element) and return_value.elem_type == "return":
@@ -65,7 +66,7 @@ class Interpreter(InterpreterBase):
                 return return_value.get("value")
             if return_value is not nil:
                 break
-      
+        
         ### END FUNC SCOPE ###
         #self.output(self.variable_scope_stack)
         self.variable_scope_stack.pop()
@@ -227,28 +228,34 @@ class Interpreter(InterpreterBase):
             ##### Start Function Call ######
 
             #### START SCOPE ####
-            self.variable_scope_stack.append({})
-
             # Assign parameters to the local variable dict
             args = statement_node.dict['args'] # passed in arguments
             params = func_def.dict['args'] # function parameters
-
-            # intialize paramas, and then assign to them each arg in order
+            # for arg in args:
+            #     self.output(arg)
+            # for param in params:
+            #     self.output(param)
+            processed_args = [{}]
+            # intialize params, and then assign to them each arg in order
             for i in range(0,len(params)):
-                # Assign to local variable list
-
-                # define param
+                # define params
                 var_name = params[i].dict['name']
-                self.variable_scope_stack[-1][var_name] = self.evaluate_expression(args[i])
-                # self.do_assignment(self.evaluate_expression(args[i]))
-                #scoped_vars[params[i].dict['name']] = self.evaluate_expression(args[i])
-            
+                processed_args[-1][var_name] = self.evaluate_expression(args[i])
+
+            main_vars = self.variable_scope_stack.copy()
+            #self.output(f"calling vars: {main_vars}")
+            # wipe all prev vars except arguments
+            self.variable_scope_stack = processed_args
+
+
+            #self.output(f"args {self.variable_scope_stack}")    
             return_value = self.run_func(func_def)
             #self.output(return_value)
             # NOTE: for if or for, remember to check the copied vars above
             
             #### END SCOPE ####
-            self.variable_scope_stack.pop()
+            #self.variable_scope_stack.pop()
+            self.variable_scope_stack = main_vars.copy()
             return return_value
                             
             ##### End Function Call ######
@@ -396,22 +403,25 @@ class Interpreter(InterpreterBase):
         if expression_node.elem_type == "nil":
             return nil
         return expression_node.dict['val']
+
+    # returns value under the variable name provided.
     def get_value_of_variable(self, expression_node):
-        # returns value under the variable name provided.
         
         if expression_node == 'nil':
             return nil
         
         # Copilot (+4)
         var_name = expression_node.dict['name']
+        #self.output(f"Vars: {self.variable_scope_stack} \n varname: {var_name}")
+
         for scope in reversed(self.variable_scope_stack): 
             if var_name in scope: 
                 val = scope[var_name] 
-                if val is nil:
-                    return nil
+                if val is None:
+                    super().error(ErrorType.NAME_ERROR, f"variable '{var_name}' declared but not defined",)
                 else: 
                     return val 
-        # self.output(self.variable_scope_stack)
+        # if varname not found
         super().error(ErrorType.NAME_ERROR, f"variable '{var_name}' used and not declared",)
 
 
@@ -490,40 +500,37 @@ class Interpreter(InterpreterBase):
         eval2 = self.evaluate_expression(expression_node.dict['op2'])
         if (type(eval1) is not bool) or (type(eval2) is not bool):
             super().error(ErrorType.TYPE_ERROR, f"Comparison args for {expression_node.elem_type} must be of same type bool.",)
-        #self.output(f"&& #1: {eval1} \n #2: {eval2}")
-         # forces evaluation on both (strict evaluation)
+        # self.output(f"&& #1: {eval1} \n #2: {eval2}")
+        # forces evaluation on both (strict evaluation)
         eval1 = bool(eval1)
         eval2 = bool(eval2)
-        #self.output(f"&& #1: {eval1} \n #2: {eval2}")
+
         
-        #self.output(f"expression: {expression_node}")
         match expression_node.elem_type:
             case '&&':
                 return (eval1 and eval2)
             case '||':
                 return (eval1 or eval2)
+    
     # No more functions remain... for now... :)
 
 #DEBUGGING
-program = """
-func complex_bool(a, b, c) {
-    return (a && b) || (!c && a);
-}
-
-func main() {
-    var x;
-    x = 5;
-    x = -x;
-    print(x);
-    print(true || false && true == true);
-}
-"""
-interpreter = Interpreter()
-interpreter.run(program)
-
-# ret = Element("return", value="hiasdas `1239")
-# num = 6
-# lst = [ret, num]
-# for thing in lst:
-#     if isinstance(thing, Element) and thing.elem_type == "return":
-#         print(type(nil))
+# program = """
+# func recursive(n) {
+#     if (n <= 0) {
+#         var baseCase;
+#         baseCase = 10;
+#         print(baseCase);  /* Expect 10 */
+#         return;
+#     }
+#     var localVar;
+#     localVar = n;
+#     print(localVar);  /* Expect decreasing values of n */
+#     recursive(n - 1);
+# }
+# func main() {
+#     recursive(5);
+# }
+# """
+# interpreter = Interpreter()
+# interpreter.run(program)
