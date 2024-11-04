@@ -48,19 +48,23 @@ class Interpreter(InterpreterBase):
         # statements key for sub-dict.
         ### BEGIN FUNC SCOPE ###
         self.variable_scope_stack.append({})
-        return_value = None
+        return_value = nil
         #self.output(f"function: {func_node}")
         for statement in func_node.dict['statements']:
             return_value = self.run_statement(statement)
             #self.output(f"Returned: {return_value} from statement: {statement.elem_type}")
             #self.output(f"Running statement: {statement}, of type: {statement.elem_type}, return value: {return_value}")
-            if return_value is not None: 
-                break # Exit loop once a return statement is hit
+            if return_value is not nil: 
+                #self.output(f"Breaking because statement {statement} returned: {return_value}")
+                break # Stop running statements once a return statement is hit
 
         ### END FUNC SCOPE ###
         self.variable_scope_stack.pop()
-        if return_value is nil:
+        #self.output(return_value)
+        if return_value is None:
             return_value = nil
+        # elif return_value is None:
+        #     return_value = nil
         return return_value
     
 
@@ -72,14 +76,18 @@ class Interpreter(InterpreterBase):
         elif self.is_assignment(statement_node):
             self.do_assignment(statement_node)
         elif self.is_func_call(statement_node):
+            #self.output(f"func {statement_node} returns: {self.do_func_call(statement_node)}")
             return self.do_func_call(statement_node)
         elif self.is_return_statement(statement_node):
+            #self.output(f"ret {statement_node} returns: {self.do_return_statement(statement_node)}")
             return self.do_return_statement(statement_node)
         elif self.is_if_statement(statement_node):
+            #self.output(f"if {statement_node} returns: {self.is_if_statement(statement_node)}")
             return self.do_if_statement(statement_node)
         elif self.is_for_loop(statement_node):
+            #self.output(f"for {statement_node} returns: {self.do_for_loop(statement_node)}")
             return self.do_for_loop(statement_node)
-        return None
+        return nil
 
     
     def is_definition(self, statement_node):
@@ -105,8 +113,8 @@ class Interpreter(InterpreterBase):
             super().error(ErrorType.NAME_ERROR, f"Variable {target_var_name} defined more than once",)
         else:
             #self.output(f"vars: {self.variable_scope_stack}")
-            self.variable_scope_stack[-1][target_var_name] = None
-        #self.variable_scope_stack[-1][target_var_name] = None
+            self.variable_scope_stack[-1][target_var_name] = nil
+        #self.variable_scope_stack[-1][target_var_name] = nil
         
 
     def do_assignment(self, statement_node):
@@ -145,11 +153,6 @@ class Interpreter(InterpreterBase):
     def do_func_call(self, statement_node):
         #self.output(statement_node)
         func_call = statement_node.dict['name']
-        #self.output(f"Calling function: {func_call}")
-        #for arg in statement_node.dict['args']:
-            #self.output(arg)
-        #self.output(func_call)
-        #self.output(f"args: {statement_node.dict['args']}")
         if func_call == "print":
             output = ""
             # loop through each arg in args list for print, evaluate their expressions, concat, and output.
@@ -158,7 +161,11 @@ class Interpreter(InterpreterBase):
                 output += str(self.evaluate_expression(arg))
             # THIS IS 1/3 OF ONLY REAL SELF.OUTPUT
             self.output(output)
+            return nil
         elif func_call == "inputi":
+
+            ## NOTE: this may come up in the git history as 'copy and pasted' but its because 
+            # my git repo didnt have this inputi() version, but my submission for project 1 did.
             # too many inputi params
             if len(statement_node.dict['args']) > 1:
                 super().error(ErrorType.NAME_ERROR,f"No inputi() function found that takes > 1 parameter",)
@@ -177,13 +184,21 @@ class Interpreter(InterpreterBase):
         
         # same as inputi but for strings
         elif func_call == "inputs":
-            output = ""
-            for arg in statement_node.dict['args']:
-                output += str(self.evaluate_expression(arg))
-            # THIS IS 3/3 OF ONLY REAL SELF.OUTPUT
-            if output != "":
-                self.output(output)
-            return self.get_input()
+            # too many inputi params
+            if len(statement_node.dict['args']) > 1:
+                super().error(ErrorType.NAME_ERROR,f"No inputi() function found that takes > 1 parameter",)
+            elif len(statement_node.dict['args']) == 1:
+                arg = statement_node.dict['args'][0]
+                # THIS IS 2/2 OF ONLY REAL SELF.OUTPUT
+                self.output(self.evaluate_expression(arg))
+                #output = str(self.evaluate_expression(arg))
+
+            user_in = super().get_input()
+            try:
+                user_in = int(user_in)
+                return user_in
+            except:
+                return user_in
         else:
             ## USER-DEFINED FUNCTION ##
             # Check if function is defined
@@ -221,8 +236,6 @@ class Interpreter(InterpreterBase):
             #### END SCOPE ####
             self.variable_scope_stack.pop()
             return return_value
-            # Re-establish old values.
-            #self.variable_name_to_value = parent_vardefs
                             
             ##### End Function Call ######
     
@@ -253,7 +266,7 @@ class Interpreter(InterpreterBase):
                 return_value = self.run_statement(statement)
                 #self.output(return_value)
                 # I dont think i can just do 'if return_value:' incase its an int
-                if return_value is not None:
+                if return_value is not nil:
                     #end scope early
                     self.variable_scope_stack.pop()
                     return return_value
@@ -264,7 +277,7 @@ class Interpreter(InterpreterBase):
                 for else_statement in else_statements:
                     return_value = self.run_statement(else_statement)
                     # I dont think i can just do 'if return_value:' incase its an int
-                    if return_value is not None:
+                    if return_value is not nil:
                         #end scope early
                         self.variable_scope_stack.pop()
                         return return_value
@@ -273,6 +286,7 @@ class Interpreter(InterpreterBase):
 
         # Copilot (+1)
         self.variable_scope_stack.pop()
+        return nil
 
 
     def do_for_loop(self, statement_node):
@@ -295,7 +309,7 @@ class Interpreter(InterpreterBase):
             for statement in statements:
                 return_value = self.run_statement(statement)
                 # I dont think i can just do 'if return_value:' incase its an int
-                if return_value is not None:
+                if return_value is not nil:
                     #end scope early
                     self.variable_scope_stack.pop()
                     return return_value
@@ -305,6 +319,7 @@ class Interpreter(InterpreterBase):
             self.variable_scope_stack.pop()
             # update = statement_node.dict['update']
             self.run_statement(update)
+        return nil
         
         
     # helper functions
@@ -366,7 +381,7 @@ class Interpreter(InterpreterBase):
         for scope in reversed(self.variable_scope_stack): 
             if var_name in scope: 
                 val = scope[var_name] 
-                if val is None:
+                if val is nil:
                     return nil
                 else: 
                     return val 
@@ -465,7 +480,6 @@ func catalan(n) {
     }
     return res;
 }
-
 func main() {
     print(catalan(0));  /* Expect 1 */
     print(catalan(1));  /* Expect 1 */
@@ -473,6 +487,7 @@ func main() {
     print(catalan(3));  /* Expect 5 */
     print(catalan(4));  /* Expect 14 */
 }
+
 
 """
 interpreter = Interpreter()
