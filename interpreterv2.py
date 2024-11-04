@@ -40,7 +40,7 @@ class Interpreter(InterpreterBase):
             
         
         # define error for 'main' not found.
-        super().error(ErrorType.NAME_ERROR, "No main() function was found")
+        super().error(ErrorType.NAME_ERROR, "No main() function was found",)
 
 
     # self explanatory
@@ -135,7 +135,7 @@ class Interpreter(InterpreterBase):
                 scope[target_var_name] = resulting_value 
                 #self.output(self.variable_scope_stack)
                 return
-        super().error(ErrorType.NAME_ERROR, f"variable used and not declared: {target_var_name}")
+        super().error(ErrorType.NAME_ERROR, f"variable used and not declared: {target_var_name}",)
 
     # Check if function is defined
     def check_valid_func(self, func_call):
@@ -405,7 +405,7 @@ class Interpreter(InterpreterBase):
                 else: 
                     return val 
         # self.output(self.variable_scope_stack)
-        super().error(ErrorType.NAME_ERROR, f"variable '{var_name}' used and not declared")
+        super().error(ErrorType.NAME_ERROR, f"variable '{var_name}' used and not declared",)
 
 
     # + or -
@@ -416,11 +416,11 @@ class Interpreter(InterpreterBase):
         eval2 = self.evaluate_expression(expression_node.dict['op2'])
         # for all operators other than + (for concat), both must be of type 'int'
         if (expression_node.elem_type != "+") and not (isinstance(eval1, int) and isinstance(eval2,int)):
-            super().error(ErrorType.TYPE_ERROR, "Arguments must be of type 'int'.")
+            super().error(ErrorType.TYPE_ERROR, "Arguments must be of type 'int'.",)
         # note, the line below looked like above 'isinstance' but i just made it this because instance was bugging (probably just had bad () lol)
         # if + and ...
         elif not ((type(eval1) == int and type(eval2) == int) or (type(eval1) == str and type(eval2) == str)):
-            super().error(ErrorType.TYPE_ERROR, "Types for + must be both of type int or string.")
+            super().error(ErrorType.TYPE_ERROR, "Types for + must be both of type int or string.",)
 
         #self.output(f"{expression_node.elem_type} #1: {eval1} \n #2: {eval2}")
         if expression_node.elem_type == "+":
@@ -442,7 +442,7 @@ class Interpreter(InterpreterBase):
             return -(eval)
         if expression_node.elem_type == "!":
             if not (type(eval) == bool):
-                super().error(ErrorType.TYPE_ERROR, "'Not' can only be used on boolean values.")
+                super().error(ErrorType.TYPE_ERROR, "'Not' can only be used on boolean values.",)
             return not (eval)
         
     # there's probably a better way to do this but oh well
@@ -453,8 +453,9 @@ class Interpreter(InterpreterBase):
         #self.output(f"== #1: {expression_node.dict['op1']} \n #2: {expression_node.dict['op2']}")
         #self.output(f"== #1: {eval1} \n #2: {eval2}")
         # != and == can compare different types.
-        if (expression_node.elem_type not in ["!=", "=="]) and (type(eval1) is not type(eval2)):
-            super().error(ErrorType.TYPE_ERROR, "Comparison arguments must be of same type.")
+        self.output(f"eval1: {eval1} eval2: {eval2}")
+        if (expression_node.elem_type not in ["!=", "=="]) and (type(eval1) != int and type(eval2) != int):
+            super().error(ErrorType.TYPE_ERROR, f"Comparison args for {expression_node.elem_type} must be of same type int.",)
         match expression_node.elem_type:
             case '<':
                 return (eval1 < eval2)
@@ -488,22 +489,23 @@ class Interpreter(InterpreterBase):
 
 #DEBUGGING
 program = """
-func foo() { 
- print("hello");
- /* no explicit return command */
-}
-
-func bar() {
-  return;  /* no return value specified */
+func type_compare(a, b) {
+    if (a == b) {
+        return "equal";
+    } else {
+        if (a < b) {
+            return "less";
+        } else {
+            return "greater";
+        }
+    }
 }
 
 func main() {
-   var val;
-   val = nil;
-   if (foo() == val && bar() == nil) { print("this should print!"); }
+
+    print("abc" >"abd");
+
 }
-
-
 """
 interpreter = Interpreter()
 interpreter.run(program)
