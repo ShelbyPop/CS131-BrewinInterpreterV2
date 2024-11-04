@@ -164,8 +164,15 @@ class Interpreter(InterpreterBase):
             output = ""
             # loop through each arg in args list for print, evaluate their expressions, concat, and output.
             for arg in statement_node.dict['args']:
+                eval = self.evaluate_expression(arg)
                 # note, cant concat unles its str type
-                output += str(self.evaluate_expression(arg))
+                if type(eval) is bool:
+                    if eval:
+                        output += "true"
+                    else: 
+                        output += "false"
+                else:
+                    output += str(self.evaluate_expression(arg))
             # THIS IS 1/3 OF ONLY REAL SELF.OUTPUT
             self.output(output)
             return nil
@@ -193,7 +200,7 @@ class Interpreter(InterpreterBase):
         elif func_call == "inputs":
             # too many inputi params
             if len(statement_node.dict['args']) > 1:
-                super().error(ErrorType.NAME_ERROR,f"No inputi() function found that takes > 1 parameter",)
+                super().error(ErrorType.NAME_ERROR,f"No inputs() function found that takes > 1 parameter",)
             elif len(statement_node.dict['args']) == 1:
                 arg = statement_node.dict['args'][0]
                 # THIS IS 3/3 OF ONLY REAL SELF.OUTPUT
@@ -415,12 +422,13 @@ class Interpreter(InterpreterBase):
         eval1 = self.evaluate_expression(expression_node.dict['op1'])
         eval2 = self.evaluate_expression(expression_node.dict['op2'])
         # for all operators other than + (for concat), both must be of type 'int'
-        if (expression_node.elem_type != "+") and not (isinstance(eval1, int) and isinstance(eval2,int)):
+        if (expression_node.elem_type != "+") and (type(eval1) != int or type(eval2) != int):
             super().error(ErrorType.TYPE_ERROR, "Arguments must be of type 'int'.",)
         # note, the line below looked like above 'isinstance' but i just made it this because instance was bugging (probably just had bad () lol)
-        # if + and ...
-        elif not ((type(eval1) == int and type(eval2) == int) or (type(eval1) == str and type(eval2) == str)):
+       
+        if (expression_node.elem_type == "+") and not ((type(eval1) == int and type(eval2) == int) or (type(eval1) == str and type(eval2) == str)):
             super().error(ErrorType.TYPE_ERROR, "Types for + must be both of type int or string.",)
+            
 
         #self.output(f"{expression_node.elem_type} #1: {eval1} \n #2: {eval2}")
         if expression_node.elem_type == "+":
@@ -439,9 +447,11 @@ class Interpreter(InterpreterBase):
         #self.output(expression_node)
         eval = self.evaluate_expression(expression_node.dict['op1'])
         if expression_node.elem_type == "neg":
+            if (type(eval) != int):
+                super().error(ErrorType.TYPE_ERROR, "'negation' can only be used on integer values.",)
             return -(eval)
         if expression_node.elem_type == "!":
-            if not (type(eval) == bool):
+            if (type(eval) != bool):
                 super().error(ErrorType.TYPE_ERROR, "'Not' can only be used on boolean values.",)
             return not (eval)
         
@@ -452,27 +462,36 @@ class Interpreter(InterpreterBase):
 
         # != and == can compare different types.
         #self.output(f"eval1: {eval1} eval2: {eval2}")
-        if (expression_node.elem_type not in ["!=", "=="]) and (type(eval1) != int and type(eval2) != int):
+        if (expression_node.elem_type not in ["!=", "=="]) and (type(eval1) != int or type(eval2) != int):
             super().error(ErrorType.TYPE_ERROR, f"Comparison args for {expression_node.elem_type} must be of same type int.",)
+        
         match expression_node.elem_type:
             case '<':
                 return (eval1 < eval2)
             case '<=':
                 return (eval1 <= eval2)
             case '==':
-                return (eval1 == eval2)
+                if not (type(eval1) == type(eval2)):
+                    return False
+                else:
+                    return (eval1 == eval2)
             case '>=':
                 return (eval1 >= eval2)
             case '>':
                 return (eval1 > eval2)
             case '!=': 
-                return (eval1 != eval2)  
+                if not (type(eval1) == type(eval2)):
+                    return True
+                else:
+                    return (eval1 != eval2)
     
     def evaluate_binary_boolean_operator(self, expression_node):
         eval1 = self.evaluate_expression(expression_node.dict['op1'])
         eval2 = self.evaluate_expression(expression_node.dict['op2'])
-        # forces evaluation on both (strict evaluation)
+        if (type(eval1) is not bool) or (type(eval2) is not bool):
+            super().error(ErrorType.TYPE_ERROR, f"Comparison args for {expression_node.elem_type} must be of same type bool.",)
         #self.output(f"&& #1: {eval1} \n #2: {eval2}")
+         # forces evaluation on both (strict evaluation)
         eval1 = bool(eval1)
         eval2 = bool(eval2)
         #self.output(f"&& #1: {eval1} \n #2: {eval2}")
@@ -487,23 +506,16 @@ class Interpreter(InterpreterBase):
 
 #DEBUGGING
 program = """
-func type_compare(a, b) {
-    if (a == b) {
-        return "equal";
-    } else {
-        if (a < b) {
-            return "less";
-        } else {
-            return "greater";
-        }
-    }
+func complex_bool(a, b, c) {
+    return (a && b) || (!c && a);
 }
 
 func main() {
-    print(type_compare(5, 5));
-    print(type_compare(10, 5));
-    print("a" + "b" == "ab");
-    print(5 + 3 == "8");
+    var x;
+    x = 5;
+    x = -x;
+    print(x);
+    print(true || false && true == true);
 }
 """
 interpreter = Interpreter()
@@ -514,4 +526,4 @@ interpreter.run(program)
 # lst = [ret, num]
 # for thing in lst:
 #     if isinstance(thing, Element) and thing.elem_type == "return":
-#         print(ret.get("value"))
+#         print(type(nil))
